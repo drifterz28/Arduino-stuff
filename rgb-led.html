@@ -51,20 +51,20 @@
 		<div class="color">Color Display</div>
 	</div>
 	<script>
-	//var conn = new WebSocket('ws://' + location.hostname + ':81/', ['arduino']);
+	var conn = new WebSocket('ws://10.0.0.114:81/', ['arduino']);
 	var slider = document.querySelectorAll('.slider');
 	var color = document.querySelector('.color');
-	// conn.onopen = function() {
-	// 	conn.send('Connect ' + new Date());
-	// };
+	conn.onopen = function() {
+		conn.send('Connect ' + new Date());
+	};
 
-	// conn.onerror = function(error) {
-	// 	console.log('Error ', error);
-	// };
+	conn.onerror = function(error) {
+		console.log('Error ', error);
+	};
 
-	// conn.onmessage = function(e) {
-	// 	console.log('Server: ', e.data);
-	// };
+	conn.onmessage = function(e) {
+		console.log('Server: ', e.data);
+	};
 	function parse(elm) {
 		return parseInt(elm.value).toString(16);
 	}
@@ -82,7 +82,7 @@
 			b = '0' + b;
 		}
 		var rgb = '#' + r + g + b;
-		//conn.send(rgb);
+		conn.send(rgb);
 		color.style.backgroundColor = rgb;
 		color.textContent = rgb;
 		console.log(rgb)
