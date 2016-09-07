@@ -1,6 +1,6 @@
 #include <Adafruit_NeoPixel.h>
 
-#define PIN 6
+#define PIN 1
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -27,12 +27,8 @@ const char* password = "........";
 
 ESP8266WebServer server(80);
 
-const int led = 1;
-
 void handleRoot() {
-  digitalWrite(led, 1);
   server.send(200, "text/plain", "hello from esp8266!");
-  digitalWrite(led, 0);
 }
 
 void setup(void){

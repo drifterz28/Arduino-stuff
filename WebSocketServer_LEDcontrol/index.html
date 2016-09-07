@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>RGB Cololrs</title>
+	<meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
+	<style>
+		.container {
+			width: 400px;
+			margin: 0 auto;
+		}
+		.slide {
+			width: 100%;
+			float: left;
+			position: relative;
+			margin: 4px 0;
+		}
+		.slider {
+			width: 80%;
+			left: 12%;
+			position: absolute;
+		}
+		.color {
+			width: 100%;
+			margin-top: 10px;
+			height: 100px;
+			text-align: center;
+			float: left;
+			opacity: .8;
+			text-shadow: 0 0 10px #fff;
+			font: 24px/100px bold;
+			transition: all .4s ease;
+		}
+		h1 {
+			text-align: center;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>LED Control</h1>
+		<div class="slide">
+			Red: <input id="r" class="slider" type="range" min="0" max="255" step="1" value="0"/>
+		</div>
+		<div class="slide">
+			Green:<input id="g" class="slider" type="range" min="0" max="255" step="1" value="0"/>
+		</div>
+		<div class="slide">
+			Blue:<input id="b" class="slider" type="range" min="0" max="255" step="1" value="0"/>
+		</div>
+		<div class="color">Color Display</div>
+	</div>
+	<script>
+	//var conn = new WebSocket('ws://' + location.hostname + ':81/', ['arduino']);
+	var slider = document.querySelectorAll('.slider');
+	var color = document.querySelector('.color');
+	// conn.onopen = function() {
+	// 	conn.send('Connect ' + new Date());
+	// };
+
+	// conn.onerror = function(error) {
+	// 	console.log('Error ', error);
+	// };
+
+	// conn.onmessage = function(e) {
+	// 	console.log('Server: ', e.data);
+	// };
+	function parse(elm) {
+		return parseInt(elm.value).toString(16);
+	}
+	function sendRGB() {
+		var r = parse(slider[0]);
+		var g = parse(slider[1]);
+		var b = parse(slider[2]);
+		if(r.length < 2) {
+			r = '0' + r;
+		}
+		if(g.length < 2) {
+			g = '0' + g;
+		}
+		if(b.length < 2) {
+			b = '0' + b;
+		}
+		var rgb = '#' + r + g + b;
+		//conn.send(rgb);
+		color.style.backgroundColor = rgb;
+		color.textContent = rgb;
+		console.log(rgb)
+	}
+
+	for (var i = 0; i < slider.length; i++) {
+		slider[i].addEventListener('change', sendRGB);
+	}
+	</script>
+</body>
+</html>
