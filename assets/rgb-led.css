@@ -1,0 +1,47 @@
+.container {
+  width: 400px;
+  margin: 0 auto;
+}
+.slide {
+  width: 100%;
+  float: left;
+  position: relative;
+  margin: 4px 0;
+}
+.slider {
+  width: 80%;
+  left: 12%;
+  position: absolute;
+}
+.color {
+  width: 100%;
+  margin-top: 10px;
+  height: 100px;
+  text-align: center;
+  float: left;
+  opacity: .8;
+  text-shadow: 0 0 10px #fff;
+  font: 24px/100px bold;
+  transition: all .4s ease;
+}
+.off-btn {
+  width: 100%;
+  display: inline-block;
+  padding: 6px 12px;
+  margin-bottom: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.42857143;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  touch-action: manipulation;
+  cursor: pointer;
+  user-select: none;
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+h1 {
+  text-align: center;
+}
