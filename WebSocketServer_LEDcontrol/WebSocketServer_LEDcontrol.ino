@@ -85,7 +85,7 @@ void setup() {
   // handle index
   server.on("/", []() {
     // send index.html
-    server.send(200, "text/html", "");
+    server.send(200, "text/html", "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>RGB Cololrs</title><meta name=\"viewport\" content=\"user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width\"><link rel=\"stylesheet\" href=\"https://drifterz28.github.io/Arduino-stuff/assets/rgb-led.css\"/></head><body><div class=\"container\"><h1>LED Control</h1><button class=\"off-btn\">Off</button><div class=\"slide\">Red: <input id=\"r\" class=\"slider\" type=\"range\" min=\"0\" max=\"255\" step=\"1\" value=\"0\"/></div><div class=\"slide\">Green:<input id=\"g\" class=\"slider\" type=\"range\" min=\"0\" max=\"255\" step=\"1\" value=\"0\"/></div><div class=\"slide\">Blue:<input id=\"b\" class=\"slider\" type=\"range\" min=\"0\" max=\"255\" step=\"1\" value=\"0\"/></div><div class=\"color\">Color Display</div></div><script src=\"https://drifterz28.github.io/Arduino-stuff/assets/rgb-led.js\"></script></body></html>");
   });
 
   server.begin();
@@ -99,4 +99,3 @@ void loop() {
   webSocket.loop();
   server.handleClient();
 }
-
