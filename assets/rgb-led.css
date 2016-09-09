@@ -1,47 +1,77 @@
+html {
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
 .container {
-  width: 400px;
   margin: 0 auto;
+  width: 400px;
 }
+
 .slide {
-  width: 100%;
   float: left;
-  position: relative;
   margin: 4px 0;
+  position: relative;
+  width: 100%;
 }
+
 .slider {
-  width: 80%;
   left: 12%;
   position: absolute;
+  width: 80%;
 }
+
 .color {
-  width: 100%;
-  margin-top: 10px;
-  height: 100px;
-  text-align: center;
+  border-radius: 4px;
   float: left;
-  opacity: .8;
-  text-shadow: 0 0 10px #fff;
   font: 24px/100px bold;
-  transition: all .4s ease;
-}
-.off-btn {
-  width: 100%;
-  display: inline-block;
+  height: 100px;
+  margin: 10px 0;
+  opacity: .8;
   padding: 6px 12px;
-  margin-bottom: 0;
+  text-align: center;
+  transition: all .4s ease;
+  width: 100%;
+}
+
+button {
+  background-image: none;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
   font-size: 14px;
   font-weight: 400;
   line-height: 1.42857143;
+  margin-bottom: 0;
+  padding: 6px 12px;
   text-align: center;
-  white-space: nowrap;
-  vertical-align: middle;
   touch-action: manipulation;
-  cursor: pointer;
   user-select: none;
-  background-image: none;
-  border: 1px solid transparent;
-  border-radius: 4px;
+  vertical-align: middle;
+  white-space: nowrap;
 }
+
+.off-btn {
+  display: inline-block;
+  width: 100%;
+}
+
 h1 {
   text-align: center;
+}
+
+.setColors {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.setColors button {
+  color: #fff;
+  flex-grow: 1;
+  margin: 4px;
+  min-width: 20%;
 }
