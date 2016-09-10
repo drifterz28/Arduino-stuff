@@ -67,7 +67,7 @@ void setup() {
     delay(1000);
   }
 
-  WiFiMulti.addAP("-2.4", "");
+  WiFiMulti.addAP("", "");
   WiFi.softAP("esp8266-ajkdafhsdjlk", "nothingyoucanfindout", 1, 1);
   while (WiFiMulti.run() != WL_CONNECTED) {
     delay(100);

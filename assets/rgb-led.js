@@ -48,7 +48,7 @@ var offState = {
   red: 0,
   green: 0,
   blue: 0,
-  hex: '#ffffff'
+  hex: '#000000'
 }
 
 var setColors = {
@@ -65,7 +65,11 @@ var setColors = {
   Aqua: '#00FFFF',
   HotPink: '#FF69B4',
   Purple: '#800080',
-  Violet: '#EE82EE'
+  Violet: '#EE82EE',
+  Yellow: '#FFFF00',
+  Gold: '#ffd700',
+  RebeccaPurple: '#663399',
+  Brown: '#a52a2a'
 };
 
 
@@ -141,7 +145,7 @@ var App = React.createClass({
   },
   render: function() {
     var hex = this.state.hex;
-    var showHexColor = hex === '#ffffff' ? 'Color Display' : hex;
+    var showHexColor = hex === '#000000' ? 'Color Display' : hex;
     var hexStyle = {
       background: hex,
       color: (this.getLuma(hex) < 100) ? '#fff' : '#000'
