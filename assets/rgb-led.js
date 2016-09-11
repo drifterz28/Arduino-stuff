@@ -1,4 +1,5 @@
 var conn = new WebSocket('ws://10.0.0.114:81/', ['arduino']);
+
 conn.onopen = function() {
   conn.send('Connect ' + new Date());
 };
@@ -8,14 +9,15 @@ conn.onerror = function(error) {
 };
 
 conn.onmessage = function(e) {
-  console.log('Server: ', e.data);
+  var rgb = e.data;
+  console.log('Server: ', rgb);
+  init(rgb.split(','));
 };
 
 var sendRGB = debounce(function(hex) {
   conn.send(hex);
   console.log(hex)
 }, 500);
-
 
 function debounce(func, wait, immediate) {
   var timeout;
@@ -72,7 +74,6 @@ var setColors = {
   Brown: '#a52a2a'
 };
 
-
 var Slider = function({color, colorValue, colorChange}) {
   return (
     <div className="slide">{color}:
@@ -90,7 +91,6 @@ var SetColors = function({setColorChange, getLuma}) {
           background: colorHex,
           color: (getLuma(colorHex) < 100) ? '#fff' : '#000'
         };
-        console.log(hexStyle)
         return (<button key={i} style={hexStyle} onClick={setColorChange.bind(null, colorHex)}>{color}</button>);
       })}
     </div>
@@ -100,6 +100,16 @@ var SetColors = function({setColorChange, getLuma}) {
 var App = React.createClass({
   getInitialState: function() {
     return offState;
+  },
+  componentWillMount: function() {
+    var hexSplit = this.props.rgb;
+    var colors = {
+      red: hexSplit[0],
+      green: hexSplit[1],
+      blue: hexSplit[2],
+    };
+    colors.hex = this.updateHexColor(colors);
+    this.setState(colors);
   },
   turnOff: function() {
     this.setState(offState);
@@ -165,8 +175,9 @@ var App = React.createClass({
     );
   }
 });
-
-ReactDOM.render(
-  <App/>,
-  document.querySelector('.container')
-);
+function init(rgb) {
+  ReactDOM.render(
+    <App rgb={rgb} />,
+    document.querySelector('.container')
+  );
+}

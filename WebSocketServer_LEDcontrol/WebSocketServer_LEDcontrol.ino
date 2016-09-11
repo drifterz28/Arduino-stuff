@@ -7,6 +7,9 @@
 #include <ESP8266mDNS.h>
 #include <Adafruit_NeoPixel.h>
 
+const char* ssid = "";
+const char* pass = "";
+
 #define PIN 0
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(95, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -15,6 +18,10 @@ ESP8266WiFiMulti WiFiMulti;
 
 ESP8266WebServer server = ESP8266WebServer(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
+
+int red = 000;
+int green = 000;
+int blue = 000;
 
 // Fill the dots one after the other with a color
 void colorWipe(uint32_t c, uint8_t wait) {
@@ -34,7 +41,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
         IPAddress ip = webSocket.remoteIP(num);
         USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
         // send message to client
-        webSocket.sendTXT(num, "Connected");
+        webSocket.sendTXT(num, String(red) + "," + String(green) + "," + String(blue));
       }
       break;
     case WStype_TEXT:
@@ -43,9 +50,9 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
         // we get RGB data
         // decode rgb data
         uint32_t rgb = (uint32_t) strtol((const char *) &payload[1], NULL, 16);
-        int red = ((rgb >> 16) & 0xFF);
-        int green = ((rgb >> 8) & 0xFF);
-        int blue = ((rgb >> 0) & 0xFF);
+        red = ((rgb >> 16) & 0xFF);
+        green = ((rgb >> 8) & 0xFF);
+        blue = ((rgb >> 0) & 0xFF);
         colorWipe(strip.Color(red, green, blue), 0);
       }
       break;
@@ -67,7 +74,7 @@ void setup() {
     delay(1000);
   }
 
-  WiFiMulti.addAP("", "");
+  WiFiMulti.addAP(ssid, pass);
   WiFi.softAP("esp8266-ajkdafhsdjlk", "nothingyoucanfindout", 1, 1);
   while (WiFiMulti.run() != WL_CONNECTED) {
     delay(100);
