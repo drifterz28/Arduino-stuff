@@ -1,18 +1,3 @@
-var conn = new WebSocket('ws://10.0.0.114:81/', ['arduino']);
-
-conn.onopen = function() {
-  conn.send('Connect ' + new Date());
-};
-
-conn.onerror = function(error) {
-  console.log('Error ', error);
-};
-
-conn.onmessage = function(e) {
-  var rgb = e.data;
-  console.log('Server: ', rgb);
-  init(rgb.split(','));
-};
 
 var sendRGB = debounce(function(hex) {
   conn.send(hex);
@@ -98,23 +83,39 @@ var SetColors = function({setColorChange, getLuma}) {
 };
 
 var App = React.createClass({
-  getInitialState: function() {
+  getInitialState() {
     return offState;
   },
-  componentWillMount: function() {
-    var hexSplit = this.props.rgb;
+  componentWillMount() {
+    var conn = new WebSocket('ws://10.0.0.114:81/', ['arduino']);
+    var rgb;
+    conn.onopen = () => {
+      conn.send('Connect ' + new Date());
+    };
+
+    conn.onerror = (error) => {
+      console.log('Error ', error);
+    };
+
+    conn.onmessage = (e) => {
+      rgb = e.data.split(',');
+      console.log('Server: ', rgb);
+      this.colorUpdate(rgb);
+    };
+  },
+  colorUpdate(colorArr) {
     var colors = {
-      red: hexSplit[0],
-      green: hexSplit[1],
-      blue: hexSplit[2],
+      red: colorArr[0],
+      green: colorArr[1],
+      blue: colorArr[2],
     };
     colors.hex = this.updateHexColor(colors);
     this.setState(colors);
   },
-  turnOff: function() {
+  turnOff() {
     this.setState(offState);
   },
-  colorChange: function(e) {
+  colorChange(e) {
     var state = this.state;
     var target = e.target;
     var color = {};
@@ -124,36 +125,29 @@ var App = React.createClass({
     console.log(colors);
     this.setState(colors);
   },
-  updateHexColor: function(colors) {
+  updateHexColor(colors) {
     var r = parse(colors.red);
     var g = parse(colors.green);
     var b = parse(colors.blue);
     return `#${r}${g}${b}`;
   },
-  hexSplit: function(hexColor) {
+  hexSplit(hexColor) {
     return [1,3,5].map(function(o) {
       return parseInt(hexColor.slice(o, o + 2), 16);
     });
   },
-  setColorChange: function(hexColor) {
+  setColorChange(hexColor) {
     var hexSplit = this.hexSplit(hexColor);
-    var colors = {
-      red: hexSplit[0],
-      green: hexSplit[1],
-      blue: hexSplit[2],
-    };
-    colors.hex = this.updateHexColor(colors);
-    this.setState(colors);
-    console.log(colors);
+    this.colorUpdate(hexSplit);
   },
-  getLuma: function(hex) {
+  getLuma(hex) {
     var colors = this.hexSplit(hex);
     var r = colors[0];
     var g = colors[1];
     var b = colors[2];
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   },
-  render: function() {
+  render() {
     var hex = this.state.hex;
     var showHexColor = hex === '#000000' ? 'Color Display' : hex;
     var hexStyle = {
@@ -161,7 +155,6 @@ var App = React.createClass({
       color: (this.getLuma(hex) < 100) ? '#fff' : '#000'
     };
     sendRGB(hex);
-    console.log(this.getLuma(hex));
     return (
       <div className="app">
         <h1>LED Control</h1>
@@ -175,9 +168,8 @@ var App = React.createClass({
     );
   }
 });
-function init(rgb) {
-  ReactDOM.render(
-    <App rgb={rgb} />,
-    document.querySelector('.container')
-  );
-}
+
+ReactDOM.render(
+  <App/>,
+  document.querySelector('.container')
+);
