@@ -1,4 +1,4 @@
-
+var conn;
 var sendRGB = debounce(function(hex) {
   conn.send(hex);
   console.log(hex)
@@ -87,7 +87,7 @@ var App = React.createClass({
     return offState;
   },
   componentWillMount() {
-    var conn = new WebSocket('ws://10.0.0.114:81/', ['arduino']);
+    conn = new WebSocket('ws://10.0.0.114:81/', ['arduino']);
     var rgb;
     conn.onopen = () => {
       conn.send('Connect ' + new Date());
