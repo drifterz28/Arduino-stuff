@@ -7,8 +7,8 @@
 #include <ESP8266mDNS.h>
 #include <Adafruit_NeoPixel.h>
 
-const char* ssid = "Empire-2.4";
-const char* pass = "5038038883";
+const char* ssid = "2.4";
+const char* pass = "";
 
 #define PIN 0
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(95, PIN, NEO_GRB + NEO_KHZ800);
