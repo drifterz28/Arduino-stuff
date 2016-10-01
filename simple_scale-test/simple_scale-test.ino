@@ -1,4 +1,4 @@
-#include <Q2HX711.h>
+#include <HX711.h>
 
 const byte hx711_data_pin1 = 4;
 const byte hx711_clock_pin1 = 5;
@@ -6,16 +6,16 @@ const byte hx711_clock_pin1 = 5;
 //const byte hx711_data_pin2 = 5;
 //const byte hx711_clock_pin2 = 4;
 
-Q2HX711 hx711_1(hx711_data_pin1, hx711_clock_pin1);
-//Q2HX711 hx711_2(hx711_data_pin2, hx711_clock_pin2);
+HX711 scale_one(hx711_data_pin1, hx711_clock_pin1);
+//HX711 scale_two(hx711_data_pin2, hx711_clock_pin2);
 
 // ~81808 seems to be 0lbs - subtract value
 int zeroValue = 0;
 
 void setup() {
   Serial.begin(9600);
-  hx711_1.setScale();
-  hx711_1.tare();
+  scale_one.setScale();
+  scale_one.tare();
 }
 
 void loop() {
@@ -29,6 +29,6 @@ void loop() {
   // ~81880 seems to be 16.9oz water battle
   // ~82296 seems to be 6lbs
   // ~82564 1 gallon of water in jug... 8.36lbs
-  Serial.println(hx711_1.read() / 100 - zeroValue);
+  Serial.println(scale_one.get_value(5));
   delay(500);
 }

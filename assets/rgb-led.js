@@ -1,4 +1,5 @@
-var conn = new WebSocket('ws://10.0.0.114:81/', ['arduino']);
+var url = location.hostname;
+var conn = new WebSocket(`ws://${url}:81/`, ['arduino']);
 var rgb;
 conn.onopen = () => {
   conn.send('Connect ' + new Date());

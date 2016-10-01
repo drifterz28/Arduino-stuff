@@ -7,11 +7,11 @@
 #include <ESP8266mDNS.h>
 #include <Adafruit_NeoPixel.h>
 
-const char* ssid = "2.4";
-const char* pass = "";
+const char* ssid = "ssid";
+const char* pass = "pass";
 
 #define PIN 0
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(95, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(10, PIN, NEO_GRB + NEO_KHZ800);
 
 #define USE_SERIAL Serial
 ESP8266WiFiMulti WiFiMulti;
