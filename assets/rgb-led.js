@@ -1,4 +1,4 @@
-const url = wsIp || location.hostname;
+const url = location.hostname;
 const conn = new WebSocket(`ws://${url}:81/`, ['arduino']);
 
 const sendRGB = debounce((hex) => {
