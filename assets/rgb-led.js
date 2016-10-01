@@ -1,36 +1,23 @@
-var url = location.hostname;
-var conn = new WebSocket(`ws://${url}:81/`, ['arduino']);
-var rgb;
-conn.onopen = () => {
-  conn.send('Connect ' + new Date());
-};
+const url = wsIp || location.hostname;
+const conn = new WebSocket(`ws://${url}:81/`, ['arduino']);
 
-conn.onerror = (error) => {
-  console.log('Error ', error);
-};
-
-conn.onmessage = (e) => {
-  rgb = e.data.split(',');
-  console.log('Server: ', rgb);
-  init(rgb);
-};
-
-var sendRGB = debounce(function(hex) {
+const sendRGB = debounce((hex) => {
   conn.send(hex);
-  console.log(hex)
+  console.log('send', hex)
 }, 500);
 
 function debounce(func, wait, immediate) {
-  var timeout;
+  let timeout;
   return function() {
-    var context = this, args = arguments;
-    var later = function() {
+    const context = this;
+    const args = arguments;
+    const later = function() {
       timeout = null;
       if(!immediate) {
         func.apply(context, args);
       }
     };
-    var callNow = immediate && !timeout;
+    const callNow = immediate && !timeout;
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
     if(callNow) {
@@ -39,22 +26,42 @@ function debounce(func, wait, immediate) {
   };
 }
 
-function parse(colorValue) {
-  var value = parseInt(colorValue).toString(16)
-  if(value.length < 2) {
-    value = '0' + value;
+const utils = {
+  parse: (colorValue) => {
+    let value = parseInt(colorValue).toString(16)
+    if(value.length < 2) {
+      value = '0' + value;
+    }
+    return value;
+  },
+  updateHexColor: (colors) => {
+    const r = utils.parse(colors.red);
+    const g = utils.parse(colors.green);
+    const b = utils.parse(colors.blue);
+    return `#${r}${g}${b}`;
+  },
+  hexSplit: (hexColor) => {
+    return [1,3,5].map(function(o) {
+      return parseInt(hexColor.slice(o, o + 2), 16);
+    });
+  },
+  getLuma: (hex) => {
+    const colors = utils.hexSplit(hex);
+    const r = colors[0];
+    const g = colors[1];
+    const b = colors[2];
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
-  return value;
-}
+};
 
-var offState = {
+const offState = {
   red: 0,
   green: 0,
   blue: 0,
   hex: '#000000'
 }
 
-var setColors = {
+const setColors = {
   Fuchsia: '#FF00FF',
   DeepPink: '#FF1493',
   DarkViolet: '#9400D3',
@@ -74,112 +81,102 @@ var setColors = {
   RebeccaPurple: '#663399'
 };
 
-var Slider = function({color, colorValue, colorChange}) {
+const Slider = function({color, colorValue, handleSliderColorChange}) {
   return (
     <div className="slide">{color}:
-      <input id={color[0]} name={color} className="slider" type="range" min="0" max="255" step="1" onChange={colorChange} value={colorValue} />
+      <input id={color[0]} name={color} className="slider" type="range" min="0" max="255" step="1" onChange={handleSliderColorChange} value={colorValue} />
     </div>
   );
 };
 
-var SetColors = function({setColorChange, getLuma}) {
+const SetColors = function({handleColorChange}) {
   return (
     <div className="setColors">
       {Object.keys(setColors).map(function(color, i) {
-        var colorHex = setColors[color];
-        var hexStyle = {
+        const colorHex = setColors[color];
+        const hexStyle = {
           background: colorHex,
-          color: (getLuma(colorHex) < 100) ? '#fff' : '#000'
+          color: (utils.getLuma(colorHex) < 100) ? '#fff' : '#000'
         };
-        return (<button key={i} style={hexStyle} onClick={setColorChange.bind(null, colorHex)}>{color}</button>);
+        return (<button key={i} style={hexStyle} onClick={handleColorChange.bind(null, colorHex)}>{color}</button>);
       })}
     </div>
   );
 };
 
-var App = React.createClass({
+const App = React.createClass({
   getInitialState() {
     return offState;
   },
+  handleError(err) {
+    console.log('Error ', error);
+  },
   componentWillMount() {
-    var hexSplit = this.props.rgb;
-    var colors = {
-      red: hexSplit[0],
-      green: hexSplit[1],
-      blue: hexSplit[2],
+    conn.onopen = () => {
+      conn.send('Connect ' + new Date());
     };
-    colors.hex = this.updateHexColor(colors);
+
+    conn.onerror = (error) => {
+      this.handleError(error);
+    };
+
+    conn.onmessage = (e) => {
+      this.handleColor(e.data)
+    };
+  },
+  handleColor(data) {
+    // get color from the server and
+    // update values on slider and color display
+    const rgb = data.split(',');
+    console.log('Server: ', rgb);
+    const colors = {
+      red: rgb[0],
+      green: rgb[1],
+      blue: rgb[2],
+    };
+    colors.hex = utils.updateHexColor(colors);
+    console.log('colorUpdate', colors);
     this.setState(colors);
   },
-  colorUpdate(colorArr) {
-    var colors = {
-      red: colorArr[0],
-      green: colorArr[1],
-      blue: colorArr[2],
-    };
-    colors.hex = this.updateHexColor(colors);
-    this.setState(colors);
+  handleOff() {
+    sendRGB(offState.hex);
   },
-  turnOff() {
-    this.setState(offState);
-  },
-  colorChange(e) {
-    var state = this.state;
-    var target = e.target;
-    var color = {};
+  handleSliderColorChange(e) {
+    const state = this.state;
+    const target = e.target;
+    let color = {};
     color[target.name] = target.value;
-    var colors = Object.assign({}, state, color);
-    colors.hex = this.updateHexColor(colors);
-    console.log(colors);
-    this.setState(colors);
+    const colors = Object.assign({}, state, color);
+    colors.hex = utils.updateHexColor(colors);
+    console.log('handleSliderColorChange', colors);
+    sendRGB(colors.hex);
   },
-  updateHexColor(colors) {
-    var r = parse(colors.red);
-    var g = parse(colors.green);
-    var b = parse(colors.blue);
-    return `#${r}${g}${b}`;
-  },
-  hexSplit(hexColor) {
-    return [1,3,5].map(function(o) {
-      return parseInt(hexColor.slice(o, o + 2), 16);
-    });
-  },
-  setColorChange(hexColor) {
-    var hexSplit = this.hexSplit(hexColor);
-    this.colorUpdate(hexSplit);
-  },
-  getLuma(hex) {
-    var colors = this.hexSplit(hex);
-    var r = colors[0];
-    var g = colors[1];
-    var b = colors[2];
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  handleColorChange(hexColor) {
+    console.log('handleColorChange', hexColor);
+    sendRGB(hexColor);
   },
   render() {
-    var hex = this.state.hex;
-    var showHexColor = hex === '#000000' ? 'Color Display' : hex;
-    var hexStyle = {
+    const hex = this.state.hex;
+    const showHexColor = hex === '#000000' ? 'Color Display' : hex;
+    const hexStyle = {
       background: hex,
-      color: (this.getLuma(hex) < 100) ? '#fff' : '#000'
+      color: (utils.getLuma(hex) < 100) ? '#fff' : '#000'
     };
-    sendRGB(hex);
     return (
       <div className="app">
         <h1>LED Control</h1>
-        <button className="off-btn" onClick={this.turnOff}>Off</button>
-        <Slider color="red" colorValue={this.state.red} colorChange={this.colorChange}/>
-        <Slider color="green" colorValue={this.state.green} colorChange={this.colorChange}/>
-        <Slider color="blue" colorValue={this.state.blue} colorChange={this.colorChange}/>
+        <button className="off-btn" onClick={this.handleOff}>Off</button>
+        <Slider color="red" colorValue={this.state.red} handleSliderColorChange={this.handleSliderColorChange}/>
+        <Slider color="green" colorValue={this.state.green} handleSliderColorChange={this.handleSliderColorChange}/>
+        <Slider color="blue" colorValue={this.state.blue} handleSliderColorChange={this.handleSliderColorChange}/>
         <div style={hexStyle} className="color">{showHexColor}</div>
-        <SetColors setColorChange={this.setColorChange} getLuma={this.getLuma}/>
+        <SetColors handleColorChange={this.handleColorChange}/>
       </div>
     );
   }
 });
 
-function init(rgb) {
-  ReactDOM.render(
-    <App rgb={rgb}/>,
-    document.querySelector('.container')
-  );
-}
+ReactDOM.render(
+  <App/>,
+  document.querySelector('.container')
+);

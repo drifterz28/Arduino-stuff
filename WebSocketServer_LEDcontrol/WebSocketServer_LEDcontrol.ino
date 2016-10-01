@@ -7,8 +7,8 @@
 #include <ESP8266mDNS.h>
 #include <Adafruit_NeoPixel.h>
 
-const char* ssid = "ssid";
-const char* pass = "pass";
+const char* ssid = "Empire-2.4";
+const char* pass = "5038038883";
 
 #define PIN 0
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(10, PIN, NEO_GRB + NEO_KHZ800);
@@ -54,6 +54,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
         green = ((rgb >> 8) & 0xFF);
         blue = ((rgb >> 0) & 0xFF);
         colorWipe(strip.Color(red, green, blue), 0);
+        webSocket.broadcastTXT(String(red) + "," + String(green) + "," + String(blue));
       }
       break;
   }
@@ -61,13 +62,8 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
 
 void setup() {
   USE_SERIAL.begin(115200);
-
-  //USE_SERIAL.setDebugOutput(true);
-
   USE_SERIAL.println();
-  strip.begin();
-  strip.show();
-
+  
   for (uint8_t t = 4; t > 0; t--) {
     USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
     USE_SERIAL.flush();
@@ -79,6 +75,9 @@ void setup() {
   while (WiFiMulti.run() != WL_CONNECTED) {
     delay(100);
   }
+  USE_SERIAL.print("SSID: ");
+  USE_SERIAL.println(ssid);
+  
   USE_SERIAL.print("IP address: ");
   USE_SERIAL.println(WiFi.localIP()); // just so you know
   // start webSocket server
@@ -96,7 +95,8 @@ void setup() {
   });
 
   server.begin();
-
+  strip.begin();
+  strip.show();
   // Add service to MDNS
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("ws", "tcp", 81);
