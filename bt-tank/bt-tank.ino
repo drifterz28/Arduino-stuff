@@ -10,12 +10,12 @@ void setup() {
    Serial.begin(9600);
    bluetooth.begin(BLUETOOTH_BAUD_RATE);
 }
-class Move {
-  void rightTrack() {}
-  void leftTrack() {}
-  void forward() {}
-  void backward {}
-}
+//class Move {
+//  void rightTrack() {}
+//  void leftTrack() {}
+//  void forward() {}
+//  void backward {}
+//}
 void loop() {
   
   if (bluetooth.available()) {

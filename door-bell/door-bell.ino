@@ -25,7 +25,7 @@ void setup() {
   Serial.println(WiFi.localIP()); // just so you know
 
   delay(1000);
-  pinMode(pushButton, INPUT);
+  pinMode(doorBell, INPUT);
   Serial.println("Go");
 }
 

@@ -7,11 +7,16 @@
 #include <ESP8266mDNS.h>
 #include <Adafruit_NeoPixel.h>
 
-const char* ssid = "Empire-2.4";
-const char* pass = "5038038883";
+#include <DNSServer.h>
+#include <WiFiManager.h>
+
+String htmlTitle = "Lamp";
+String ApName = "ESP_lamp";
+String hostName = "lamp";
+String ApPass = "0123456789";
 
 #define PIN 0
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(10, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(41, PIN, NEO_GRB + NEO_KHZ800);
 
 #define USE_SERIAL Serial
 ESP8266WiFiMulti WiFiMulti;
@@ -19,10 +24,19 @@ ESP8266WiFiMulti WiFiMulti;
 ESP8266WebServer server = ESP8266WebServer(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
 
+int toggleSwitch = 3;
+
+int holdState = 0;
+int buttonState = 0;
 int red = 000;
 int green = 000;
 int blue = 000;
+int lastRed = 150;
+int lastGreen = 150;
+int lastBlue = 150;
 
+uint8_t MAC_array[6];
+char MAC_char[18];
 // Fill the dots one after the other with a color
 void colorWipe(uint32_t c, uint8_t wait) {
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
@@ -53,6 +67,11 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
         red = ((rgb >> 16) & 0xFF);
         green = ((rgb >> 8) & 0xFF);
         blue = ((rgb >> 0) & 0xFF);
+        if(red > 0 || green > 0 || blue > 0) {
+          lastRed = red;
+          lastGreen = green;
+          lastBlue = blue;
+        }
         colorWipe(strip.Color(red, green, blue), 0);
         webSocket.broadcastTXT(String(red) + "," + String(green) + "," + String(blue));
       }
@@ -60,49 +79,85 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
   }
 }
 
-void setup() {
-  USE_SERIAL.begin(115200);
-  USE_SERIAL.println();
-  
-  for (uint8_t t = 4; t > 0; t--) {
-    USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
-    USE_SERIAL.flush();
-    delay(1000);
-  }
+void turnOff() {
+  red = 000;
+  green = 000;
+  blue = 000;
+  webSocket.broadcastTXT(String(red) + "," + String(green) + "," + String(blue));
+  colorWipe(strip.Color(red, green, blue), 0);
+}
 
-  WiFiMulti.addAP(ssid, pass);
-  WiFi.softAP("esp8266-ajkdafhsdjlk", "nothingyoucanfindout", 1, 1);
-  while (WiFiMulti.run() != WL_CONNECTED) {
-    delay(100);
-  }
-  USE_SERIAL.print("SSID: ");
-  USE_SERIAL.println(ssid);
+void turnOn() {
+  red = lastRed;
+  green = lastGreen;
+  blue = lastBlue;
+  webSocket.broadcastTXT(String(red) + "," + String(green) + "," + String(blue));
+  colorWipe(strip.Color(red, green, blue), 0);
+}
+
+void setup() {
+  USE_SERIAL.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY);
+  USE_SERIAL.println("Start setup");
+  
+  delay(4000);
+  WiFiManager wifiManager;
+  wifiManager.autoConnect(ApName.c_str(), ApPass.c_str());
+  
+  Serial.println("WiFi connected");
+  
+  Serial.print("Get MAC address: ");
+  Serial.println(MAC_char);
   
   USE_SERIAL.print("IP address: ");
   USE_SERIAL.println(WiFi.localIP()); // just so you know
+  
   // start webSocket server
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
 
-  if (MDNS.begin("esp8266")) {
+  if (MDNS.begin(hostName.c_str())) {
     USE_SERIAL.println("MDNS responder started");
   }
 
   // handle index
   server.on("/", []() {
     // send index.html
-    server.send(200, "text/html", "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>RGB Cololrs</title><meta name=\"viewport\" content=\"user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width\"><link rel=\"stylesheet\" href=\"https://drifterz28.github.io/Arduino-stuff/assets/rgb-led.css\"/><script src=\"https://unpkg.com/react@15.3.1/dist/react.js\"></script><script src=\"https://unpkg.com/react-dom@15.3.1/dist/react-dom.js\"></script><script src=\"https://unpkg.com/babel-core@5.8.38/browser.min.js\"></script></head><body><div class=\"container\"></div><script type=\"text/babel\" src=\"https://drifterz28.github.io/Arduino-stuff/assets/rgb-led.js\"></script></body></html>");
+    server.send(200, "text/html", "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>" + htmlTitle + "</title><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><link rel=\"stylesheet\" href=\"https://drifterz28.github.io/Arduino-stuff/assets/rgb-led.css\"/><script src=\"https://unpkg.com/react@15.3.1/dist/react.js\"></script><script src=\"https://unpkg.com/react-dom@15.3.1/dist/react-dom.js\"></script><script src=\"https://unpkg.com/babel-core@5.8.38/browser.min.js\"></script></head><body><div class=\"container\"></div><script type=\"text/babel\" src=\"https://drifterz28.github.io/Arduino-stuff/assets/rgb-led.js\"></script></body></html>");
   });
 
+  server.on("/on", []() {
+    turnOn();
+    server.send(200, "text/plain", "On");
+  });
+  
+  server.on("/off", []() {
+    turnOff();
+    server.send(200, "text/plain", "Off");
+  });
+  
   server.begin();
   strip.begin();
   strip.show();
   // Add service to MDNS
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("ws", "tcp", 81);
+  pinMode(toggleSwitch, INPUT_PULLUP);
 }
 
 void loop() {
   webSocket.loop();
   server.handleClient();
+  int newButtonState = digitalRead(toggleSwitch);
+  if(buttonState != newButtonState) {
+    buttonState = newButtonState;
+    if(red == 000 && green == 000 && blue == 000) {
+      turnOn();
+    } else {
+      turnOff();
+    }
+  }
+  if ((WiFiMulti.run() != WL_CONNECTED)) {
+    WiFi.begin();
+  }
+  delay(100);
 }
