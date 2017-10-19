@@ -8,35 +8,35 @@
 #include <Button-state.h>
 #include <Adafruit_NeoPixel.h>
 
-Button myBtn(BUTTON, true, true, 20);
+Button myBtn(BUTTON, true, true, 60);
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS1, PINforControl, NEO_GRB + NEO_KHZ800);
 
 unsigned long patternInterval = 20 ; // time between steps in the pattern
 unsigned long lastUpdate = 0 ; // for millis() when last update occoured
-unsigned long intervals [] = { 20, 20, 50, 100, 40, 40, 0 } ; // speed for each pattern
-
+unsigned long intervals [] = { 20, 20, 50, 0, 0, 0, 0 } ; // speed for each pattern
+int pattern = 7;
 void setup() {
+  Serial.begin(9600);
   strip.begin(); // This initializes the NeoPixel library.
   wipe(); // wipes the LED buffers
+  strip.setBrightness(50);
 }
 
 void loop() {
-  static int pattern = 0, lastReading;
+
   myBtn.read();
   if (myBtn.wasPressed()) {
     pattern++ ; // change pattern number
     if (pattern > 7) pattern = 0; // wrap round if too big
     patternInterval = intervals[pattern]; // set speed for this pattern
     wipe(); // clear out the buffer
-    delay(50); // debounce delay
   }
-  lastReading = reading; // save for next time
-
   if (millis() - lastUpdate > patternInterval) updatePattern(pattern);
 }
 
 void  updatePattern(int pat) { // call the pattern currently being created
+  Serial.println(pat);
   switch (pat) {
     case 0:
       rainbow();
@@ -60,7 +60,7 @@ void  updatePattern(int pat) { // call the pattern currently being created
       colorWipe(strip.Color(100, 100, 100)); // ??
       break;
     case 7:
-      colorWipe(strip.Color(0, 0, 0)); // off
+      colorWipe(strip.Color(0, 0, 0)); // ??
       break;
   }
 }
@@ -112,15 +112,20 @@ void theaterChaseRainbow() { // modified from Adafruit example to make it a stat
 }
 
 void colorWipe(uint32_t c) { // modified from Adafruit example to make it a state machine
-  static int i = 0;
-  strip.setPixelColor(i, c);
-  strip.show();
-  i++;
-  if (i >= strip.numPixels()) {
-    i = 0;
-    wipe(); // blank out strip
+//  static int i = 0;
+//  strip.setPixelColor(i, c);
+//  strip.show();
+//  i++;
+//  if (i >= strip.numPixels()) {
+//    i = 0;
+//    wipe(); // blank out strip
+//  }
+//  lastUpdate = millis(); // time for next change to the display
+
+  for (int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, c);
   }
-  lastUpdate = millis(); // time for next change to the display
+  strip.show();
 }
 
 
