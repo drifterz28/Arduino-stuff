@@ -1,4 +1,3 @@
-// includes and constance
 #include "DHT.h"
 #include <FS.h>
 #include "HTTPSRedirect.h"
@@ -17,22 +16,22 @@ extern "C" {
   extern cont_t g_cont;
 }
 
-char main_delay[3];
+char minute_delay[3] = "1";
 char location_name[] = "Some Room";
-char sheet_id[] = "";
+char sheet_id[] = "15qgEBCoIykGMVdtLXLkE1Ocjmze-OV-w9h5clfmgvmY";
 
 // DHT sensor setup
 const int DhtPin = 2;     // sensor pin connected to
 const uint8_t DhtType = DHT22;   // DHT 22 sensor
 const int resetBtn = 0;
 const int httpsPort = 443;
+const int maxConnect = 20;
 const bool isFahrenheit = true; // Read temperature as Fahrenheit (isFahrenheit = true)
 const char host[] = "script.google.com";
 const char ApName[] = "Temp_tracker";
 const char fingerprint[] = "2C:94:20:14:D6:16:AA:CB:B4:DB:66:11:5F:99:0E:EA:B8:D3:3E:8B";
 bool shouldSaveConfig = false;
 unsigned long TimerA;
-bool hasBeenSetup = false;
 String payload_base =  "{\"command\": \"appendRow\", \
                     \"sheet_name\": \"Sheet1\", \
                     \"values\": ";
@@ -56,30 +55,27 @@ void setup() {
   Serial.begin(115200);
   Serial.println("");
   Serial.println("Setup");
-
-  free_heap_before = ESP.getFreeHeap();
-  free_stack_before = cont_get_free_stack(&g_cont);
-  Serial.printf("Free heap before: %u\n", free_heap_before);
-  Serial.printf("unmodified stack   = %4d\n", free_stack_before);
-
   dht.begin();
   reset.begin();
+  wifiConfigSetup();
+  sheetSetup();
   delay(500);
 }
 
 void loop() {
-  if (reset.pressed()) {
-    wifiConfigSetup();
-  }
-  int pullDelay = main_delay[0] + 0;
+//  if (reset.pressed()) {
+//    WiFiManager wifiManager;
+//    wifiManager.resetSettings();
+//  }
+
+  int pullDelay = minute_delay[0] + 0;
+  Serial.print("pullDelay ");
   Serial.println(pullDelay);
-  if (millis() - TimerA >= pullDelay * 60000 && hasBeenSetup) {
-    static int error_count = 0;
-    static int connect_count = 0;
-    const unsigned int MAX_CONNECT = 20;
+
+  if (millis() - TimerA >= pullDelay * 60000) {
+    static int errorCount = 0;
+    static int connectCount = 0;
     static bool flag = false;
-    //Serial.printf("Free heap: %u\n", ESP.getFreeHeap());
-    //Serial.printf("unmodified stack   = %4d\n", cont_get_free_stack(&g_cont));
 
     if (!flag) {
       free_heap_before = ESP.getFreeHeap();
@@ -93,18 +89,18 @@ void loop() {
     if (client != nullptr) {
       if (!client->connected()) {
         client->connect(host, httpsPort);
-        payload = payload_base + "\"" + free_heap_before + "," + free_stack_before + "\"}";
+        payload = payload_base + "\"" +
+                  free_heap_before + "," + free_stack_before + "\"}";
         client->POST(url2, host, payload, false);
       }
-    }
-    else {
+    } else {
       Serial.println("Error creating client object!");
-      error_count = 5;
+      errorCount = 5;
     }
 
-    if (connect_count > MAX_CONNECT) {
+    if (connectCount > maxConnect) {
       //error_count = 5;
-      connect_count = 0;
+      connectCount = 0;
       flag = false;
       delete client;
       return;
@@ -112,26 +108,18 @@ void loop() {
 
     Serial.println("GET Data from cell 'A1':");
     if (client->GET(url3, host)) {
-      ++connect_count;
-    }
-    else {
-      ++error_count;
+      ++connectCount;
+    } else {
+      ++errorCount;
       Serial.println("Error-count while connecting: ");
-      Serial.println(error_count);
+      Serial.println(errorCount);
     }
 
     Serial.println("POST append memory data to spreadsheet:");
-    payload = payload_base + "\"" + ESP.getFreeHeap() + "," + cont_get_free_stack(&g_cont) + "\"}";
-    if (client->POST(url2, host, payload)) {
-      ;
-    }
-    else {
-      ++error_count;
-      Serial.println("Error-count while connecting: ");
-      Serial.println(error_count);
-    }
+    payload = payload_base + "\"" +
+              ESP.getFreeHeap() + "," + cont_get_free_stack(&g_cont) + "\"}";
 
-    if (error_count > 3) {
+    if (errorCount > 3) {
       Serial.println("Halting processor...");
       delete client;
       client = nullptr;

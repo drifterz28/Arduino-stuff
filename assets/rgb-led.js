@@ -177,6 +177,8 @@ const App = React.createClass({
   }
 });
 
+document.body.insertAdjacentHTML('beforbegin', '<link rel="shortcut icon" href="assets/icon.svg">');
+
 ReactDOM.render(
   <App/>,
   document.querySelector('.container')

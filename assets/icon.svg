@@ -1,0 +1,9 @@
+<svg class="tree" viewBox="0 0 50 64" xmlns="http://www.w3.org/2000/svg">
+	<filter id="shadow" width="120" >
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-color="blue"/>
+    </filter>
+	<circle cx=24 cy=24 r=20 fill="transparent" stroke-width=5 stroke="tan" filter="url(#shadow)" />
+	<rect x="14" y="42" width="20" height="20" fill="tan" />
+	<rect x="14" y="43" width="20" height=".1" />
+	<rect x="14" y="51" width="20" height="4" fill="sienna" />
+</svg>
