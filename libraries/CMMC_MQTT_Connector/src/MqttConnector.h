@@ -5,6 +5,7 @@
 #include "ESP8266WiFi.h"
 #include <functional>
 #include <ArduinoJson.h>
+#include "version.h"
 
 #ifdef ESP8266
 extern "C" {
@@ -114,6 +115,7 @@ public:
     void loop();
     void init_config(const char*, uint16_t);
     void sync_pub(String payload);
+    void sync_advpub(String prefix, String topic, String payload, bool retain);
     void clear_last_will(String payload);
     void connect();
     void publish(MQTT::Publish p) {
@@ -260,7 +262,7 @@ private:
     JsonObject *d;
     JsonObject *info;
 
-    float _version = 0.96f;
+    String _version = APP_VERSION;
     bool _pub_lock = false;
 
 };

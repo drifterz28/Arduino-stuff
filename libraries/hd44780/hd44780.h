@@ -1,7 +1,7 @@
 //  vi:ts=4
 // -------------------------------------------------------------------------
 //  hd44780.h - hd44780 base class
-//  Copyright (c) 2014-2016  Bill Perry
+//  Copyright (c) 2014-2018  Bill Perry
 //  (Derivative work of arduino.cc IDE LiquidCrystal library)
 //  Note:
 //    Original Copyrights for LiquidCrystal are a mess as originally none were
@@ -43,6 +43,11 @@
 // The hd44780 API also provides some addtional extensions and all the API
 // functions provided by hd44780 are common across all i/o subclasses.
 //
+// -----------------------------------------------------------------------
+// History
+//
+// 2017.12.23  bperrybap - added LCD API 1.0 init() function
+// 2017.12.23  bperrybap - allow write() to use 0 as a value without cast
 // 2017.05.11  bperrybap - added auto linewrap functionality
 // 2016.12.26  bperrybap - new BUSY error status, new constructors
 // 2016.09.08  bperrybap - changed param order of iowrite() to match ioread()
@@ -74,8 +79,8 @@
 #include <inttypes.h>
 #include <Print.h>
 
-#define HD44780_VERSION		900
-#define HD44780_VERSIONSTR	"0.9.0"
+#define HD44780_VERSION		903
+#define HD44780_VERSIONSTR	"0.9.3"
 
 class hd44780 : public Print
 {
@@ -171,7 +176,7 @@ public:
 
 #if 0
 	// init ()
-	// This will NEVER be implemented in this class as it is
+	// This version will NEVER be implemented in this class as it is
 	// not conformant to LCD API 1.0 and is hardware i/o specific
 	void init(uint8_t fourbitmode, uint8_t rs, uint8_t rw, uint8_t enable,
 	    uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3,
@@ -183,6 +188,13 @@ public:
 	int setCursor(uint8_t col, uint8_t row); 
 	size_t write(uint8_t value);	// does char & line processing
 	size_t _write(uint8_t value);	// does not do char & line processing
+// write() overloads for 0 or null which is an int
+// This is only because Print class doesn't do it.
+	inline size_t write(unsigned int value) { return(write((uint8_t)value)); }
+	inline size_t write(int value) { return(write((uint8_t)value)); }
+	inline size_t _write(unsigned int value) { return(_write((uint8_t)value)); }
+	inline size_t _write(int value) { return(_write((uint8_t)value)); }
+
 	using Print::write; // for other Print Class write() functions
 	int cursor();
 	int noCursor();
@@ -193,10 +205,11 @@ public:
 	int scrollDisplayLeft();
 	int scrollDisplayRight();
 	int autoscroll(); 			// auto horizontal scrolling
-	int noAutoscroll();		// no auto horizontal scrolling
+	int noAutoscroll();			// no auto horizontal scrolling
 	int leftToRight();
 	int rightToLeft();
-	int createChar(uint8_t charval, uint8_t charmap[]);
+	int createChar(uint8_t charval, uint8_t charmap[]); // no PROGMEM
+
 	int moveCursorLeft();
 	int moveCursorRight();
 	// sets memory address for each row, added in IDE 1.6.0
@@ -205,7 +218,8 @@ public:
 	// Mandatory LCD API 1.0 functions
 	// ================================
 
-	// init(); // not implemented
+	int init(); // uses defaults; using begin(cols, rows) is recommended
+
 #if ( __GNUC__ >= 4) && (__GNUC_MINOR__ >= 5)
 	inline void __attribute__((deprecated("Use setExecTimes() instead"))) setDelay(uint32_t CmdDelay, uint32_t CharDelay)
 			 {setExecTimes(CmdDelay, CharDelay);}
@@ -302,11 +316,26 @@ public:
 	// These are hd44780 lib extensions that are
 	// not part of LCD 1.0 or LiquidCrystal
 	// note:
-	// status() is exists in LCD 1.0 API but is different
-	// This status() function will be consistent across all i/o subclasses
+	// status() exists in LCD 1.0 API but is different
+	// hd44780 status() function will be consistent across all i/o subclasses
 	// ===================================================================
 	int backlight(void);		// turn on Backlight (max brightness)
 	int noBacklight(void);		// turn off Backlight
+
+	// PROGMEM is wreck on AVR, as there is no way to detect its use.
+	// for now:
+	// hd44780 assumes that const stores data in flash and 
+	// on processors that use/need PROGMEM it must be used on the declaration
+	inline int createChar(uint8_t charval, char charmap[])	// does not assume PROGMEM
+		{ return(createChar(charval, (uint8_t *) charmap)); }
+
+	// on processors that don't use/need PROGMEM it can be left off the declaration
+	int createChar(uint8_t charval, const uint8_t charmap[]); // assumes PROGMEM
+
+	// this function is for compatibilty with other libraries like fm's newliquidCrystal
+	inline int createChar(uint8_t charval, const char charmap[]) // assumes PROGMEM
+		{ return(createChar(charval, (const uint8_t *) charmap)); }
+
 	int read(void);
 	// enable automatic line wrapping (only works in left 2 right mode)
 	int lineWrap(void)  { if(_displaymode & HD44780_ENTRYLEFT2RIGHT) {_wraplines=1; return(RV_ENOERR);}else{return(RV_ENOTSUP);}}

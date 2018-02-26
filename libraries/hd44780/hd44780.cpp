@@ -1,7 +1,7 @@
 //  vi:ts=4
 // -----------------------------------------------------------------------
 //  hd44780.cpp - hd44780 base class
-//  Copyright (c) 2014-2016  Bill Perry
+//  Copyright (c) 2014-2018  Bill Perry
 //  (Derivative work of arduino.cc IDE LiquidCrystal library)
 //  Note:
 //    Original Copyrights for LiquidCrystal are a mess as originally none were
@@ -43,6 +43,10 @@
 // The hd44780 API also provides some addtional extensions and all the API
 // functions provided by hd44780 are common across all i/o subclasses.
 //
+// -----------------------------------------------------------------------
+// History
+//
+// 2017.12.23  bperrybap - added LCD API 1.0 init() function
 // 2017.05.11  bperrybap - setCursor() wraps when auto linewrap enabled
 //                         and col beyond end of line
 // 2017.05.11  bperrybap - linewrap tweak for better visual cursor position
@@ -93,8 +97,26 @@ hd44780::hd44780(uint8_t cols, uint8_t rows) : _cols(cols), _rows(rows)
 hd44780::hd44780(uint8_t cols, uint8_t rows, uint32_t chExecTimeUs, uint32_t insExecTimeus) :
 		 _cols(cols), _rows(rows), _chExecTime(chExecTimeUs), _insExecTime(insExecTimeus)
 {
-	setExecTimes(HD44780_CHEXECTIME, HD44780_INSEXECTIME);
 	markStart(0); // initialize last start time to 'now'
+}
+
+// undocumented init() function to allow compatibilty with certain
+// other "liquidcrystal" libraries like LiquidCrystal_I2C
+//
+// It is different than the IDE bundled LiquidCrystal library in that 
+// it takes no parameters to be consistent across all i/o classes.
+// If there is no default geometry for the i/o class and
+// rows & cols has not been previously set, then the default will be 16x2
+//
+int hd44780::init()
+{
+uint8_t cols, rows;
+
+	cols = _cols;
+	if(!_cols) cols = 16;
+	rows = _rows;
+	if(!rows) rows = 2;
+	return(begin(cols, rows));
 }
 
 //
@@ -111,7 +133,7 @@ int hd44780::begin(uint8_t cols, uint8_t rows, uint8_t dotsize)
 {
 int rval = 0;
 
-	_cols = cols; // FIXME, this may not be needed anymore
+	_cols = cols;
 	_rows = rows;
 	/*
 	 * Limit lines/rows to max in the row offset table
@@ -121,6 +143,7 @@ int rval = 0;
 
 	/*
 	 * create default row/line offset table of addresses for each row/line
+	 * if not set by user before begin() is called.
 	 * See here for further explanation of lcd memory addressing:
 	 * http://web.alfredstate.edu/weimandn/lcd/lcd_addressing/lcd_addressing_index.html
 	 * This default will handle:
@@ -130,7 +153,9 @@ int rval = 0;
 	 *   (This requires ugly mods to the library to make work)
 	 * - 40x4 is dual 40x2 displays using dual E signals which is not supported.
 	 */
-	setRowOffsets(0x00, 0x40, 0x00 + cols, 0x40 + cols);
+
+	if(!_rowOffsets[0] && !_rowOffsets[1] && !_rowOffsets[2] && !_rowOffsets[3])
+		setRowOffsets(0x00, 0x40, 0x00 + cols, 0x40 + cols);
 
 	/*
 	 * SEE PAGE 45/46 of Hitachi HD44780 spec FOR INITIALIZATION SPECIFICATION.
@@ -631,8 +656,12 @@ int hd44780::noAutoscroll(void)
 	return(command(HD44780_ENTRYMODESET | _displaymode));
 }
 
-// Allows us to fill the first 8 CGRAM locations
+// Allows filling in the first 8 CGRAM locations
 // with custom characters
+// note that it is not possible to support more than 8 locations
+// since SETCGRAMADDR instruction is bit 6 and there no room
+// for any more address bits.
+// (location is bits 3-5 and data row is bits 0-2 of the instruction)
 int hd44780::createChar(uint8_t location, uint8_t charmap[])
 {
 int rval;
@@ -659,6 +688,37 @@ int ddramaddr;
 	// put LCD back into DDRAM mode so write() works
 	return(setCursor(ddramaddr , 0));
 }
+
+// special version of code to support wimpy AVR parts that can't directly access
+// const data in flash like all the other processors
+// Note that most other Arduino cores have adopted to support the
+// AVR proprietary PROGMEM macros to be compatible with AVR specific code.
+// Since the macro PROGMEM is defined when proprietary AVR progmem support is
+// implememented (even on non AVR cores),
+// this code will look for that macro to enable special code to deal with it.
+// While at this time, this is only needed for AVR parts, it will work on
+// non AVR parts that have implemented support for the proprietary
+// AVR progmem crap.
+//
+#if defined (PROGMEM)
+int hd44780::createChar(uint8_t location, const uint8_t *charmap)
+{
+uint8_t buf[8];
+	// fetch/read the full 8 byte glyph data into RAM
+	for(int i= 0; i< 8; i++)
+	{
+		buf[i] = pgm_read_byte(charmap++);
+	}
+	// call the RAM based function to actually send it to the LCD
+	return(createChar(location, buf));
+}
+#else
+int hd44780::createChar(uint8_t location, const uint8_t *charmap)
+{
+	return(createChar(location, (uint8_t *)charmap));
+}
+
+#endif
 
 // turn on backlight at full intensity
 int hd44780::backlight(void)
@@ -721,7 +781,11 @@ int status;
 int hd44780::status()
 {
 int rvalue = ioread(HD44780_IOcmd);
-	markStart(0); // status reads do not require execution time
+	// markStart() is not called here as status reads do not
+	// require any execution time.
+	// setting the start time to now, which is 0, can potentially erase
+	// the execution time of a previous command if status reads
+	// are not supported therefore, just leave the previous start time.
 	return(rvalue);
 }
 
@@ -732,6 +796,11 @@ int rvalue = ioread(HD44780_IOcmd);
 int hd44780::read()
 {
 int rvalue = ioread(HD44780_IOdata);
+	// it apears that even though the read operation actually completed
+	// when the data has been read, i.e. ioread() returns,
+	// that the chip cannot take another instruction
+	// until after the normal instruction execution time.
+	// See Table 6 page 25 of Hitachi hd44780 datasheet
 	markStart(_insExecTime);
 	return(rvalue);
 }
@@ -746,7 +815,7 @@ size_t rval;
 	rval = _write(value);
 	if(_wraplines)
 	{
-		// currently onl works for left to right mode
+		// currently only works for left to right mode
 		if(++_curcol >= _cols)
 		{
 			_curcol = 0;

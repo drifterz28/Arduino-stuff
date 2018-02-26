@@ -1,7 +1,7 @@
 //  vi:ts=4
 // ---------------------------------------------------------------------------
 //  hd44780_I2Cexp.h - hd44780_I2Cexp i/o subclass for hd44780 library
-//  Copyright (c) 2013-2017  Bill Perry
+//  Copyright (c) 2013-2018  Bill Perry
 // ---------------------------------------------------------------------------
 //
 //  This file is part of the hd44780 library
@@ -60,6 +60,10 @@
 // It will correctly identify the pin mapping but incorrectly determine
 // the backlight active level control.
 //
+// ---------------------------------------------------------------------------
+// History
+//
+// 2017.12.23  bperrybap - added LiquidCrystal_I2C compatible constructor
 // 2017.05.12  bperrybap - now requires IDE 1.0.1 or newer
 //                         This is to work around TinyWireM library bugs
 // 2017.01.07  bperrybap - unknown address is now an address of zero
@@ -207,6 +211,13 @@ hd44780_I2Cexp(I2CexpType type, uint8_t rs, uint8_t rw, uint8_t en,
 {
    config(0, type, rs, rw, en, d4, d5, d6, d7, bl, blLevel); // auto locate i2c address
 }
+
+
+// -- undocumented LiquidCrystal_I2C compatible constructor
+// Note: auto locate i2c address is also supported by using address 0 (zero)
+// The init() function is also supported
+hd44780_I2Cexp(uint8_t addr, uint8_t cols, uint8_t rows) : 
+	hd44780(cols, rows), _addr(addr), _expType(I2Cexp_UNKNOWN) {}
 
 
 // -- Explicit constructors, specify address & pin mapping information --
@@ -513,7 +524,7 @@ int rval = hd44780::RV_EIO;
 	if(Wire.endTransmission(1))
 		goto returnStatus;
 
-	// read the expander port to get the upper lower of the byte
+	// read the expander port to get the lower nibble of the byte
 	// We can't look at the return value from requestFrom() on the TineyWireM
 	// library as it doesn't work like it is supposed to.
 	// So we look at the return status from read() instead.
@@ -522,6 +533,11 @@ int rval = hd44780::RV_EIO;
 	iodata = Wire.read();
 
 	if(iodata < 0) // did we not receive a byte?
+		goto returnStatus;
+
+	Wire.beginTransmission(_addr);
+	Wire.write(gpioValue); // lower E after reading nibble
+	if(Wire.endTransmission(1))
 		goto returnStatus;
 
 	// map i/o expander port bits into lower nibble of byte
@@ -999,7 +1015,7 @@ uint8_t rs, rw, en, d4, d5, d6, d7, bl, blLevel;
 	else
 	{
 		// couldn't figure it out
-		return(-1);
+		return(hd44780::RV_ENOTSUP);
 	}
 	config(_addr, _expType, rs, rw, en, d4, d5, d6, d7, bl, blLevel);
 	return(0);

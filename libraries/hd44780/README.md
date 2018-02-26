@@ -1,18 +1,8 @@
-# `hd44780` Extensible hd44780 LCD library ![hd44780Version](https://img.shields.io/badge/Version-0.9.0-yellow.svg?style=plastic)
+# `hd44780` Extensible hd44780 LCD library ![hd44780Version](https://img.shields.io/badge/Version-0.9.3-yellow.svg?style=plastic)
 
 CurrentStatus
 =============
-The library is currently in an alpha state.
-
-While the API and underlying code is stable and has been tested, there are
-possibly some changes in the constructors for the included i/o classes that will
-not be backward compatible, particuarly for the `hd44780_I2Cexp` i/o class.
-
-Any potential changes are not anticipated to affect lcd `hd44780_I2Cexp` autoconfiguration object definitions or main line sketch code.
-
-After these potential changes are finalized, the project will move to a beta state
-and should quickly move to a 1.0.0 release candidate followed by a
-1.0.0 release.
+The library is currently in a beta state very close to a 1.0.0 release
 
 Licensing
 =========
@@ -45,31 +35,23 @@ with most of the LCD API 1.0 Specification (some of which is nearly obsolete).
 The hd44780 API also provides some addtional extensions and all the API
 functions provided by hd44780 are common across all i/o subclasses.
 The most most significant extensions being:
+- ability to enable automatic line wrapping
 - ability to modify the libraries expected command execution times.
 - API functions return a status to indicate whether successful
+- automatic detection and s/w work around for LCD keypad shields with bad backlight circuit
+- self configuration of i2c address and pin mappings for i2c backpacks
 - ability to tell if lcd initialization failed
 - ability to read data or status from the LCD (requires r/w control)
 - ability to tell if sending a raw command to the LCD failed
 
 S/W requirements
 ================
-- ### IDE version 1.0 or later (versions 1.6.9 and higher are recommended)
+- ### IDE version 1.0.1 or later (versions 1.6.9 and higher are recommended)
 
 - ### IDE versions that should be avoided:
 	- IDE versions 1.5 to 1.55 (unnecessary file name restrictions, breaks many libraries)
 	- IDE version 1.6.6 (has function prototyping issues that can break some sketches)
 	- IDE version 1.6.8 (has serial port issues that breaks on certain boards)
-
-**NOTE**<br>
-There are two "Ardino" entities. arduino.cc and arduino.org
-While things appear to be converging/merging, and on Dec 20, 2016 there was a big merging of the two code bases
-for the 1.8.0 release, for the time being,
-IDEs from arduino.org are still not recommended as arduino.org 1.8.0 is not the same as arduino.cc 1.8.0
-and the 1.8.0 arduino.org IDE does not work at all in some OS environments.
-Also, IDEs from Arduino.org  prior to 1.8.0 are quite far behind IDEs from arduino.cc interms of 
-of features and have function prototyping issues that prevent some of the example sketches in
-this library from compiling. 
-Therefore, for the time being, it is recommend that Arduino IDEs be obtained from arduino.cc
 
 H/W support
 ===========
@@ -88,6 +70,8 @@ The library currenly comes with the following i/o subclasses:
 * `hd44780_I2Clcd` control LCD with native i2c interface (PCF2116, PCF2119x, etc...)
 
 * `hd44780_NTCU165ECPB` control Noritake CU165ECBP-T2J LCD display over SPI
+
+* `hd44780_NTCUUserial` control Noritake CU-U Series VFD display in serial mode
 
 
 Installation
@@ -124,7 +108,7 @@ The hd44780 sketchbook library must now be renamed. (see below)
 On these versions of the IDE, the install must be done manually.
 To install the library simply extract it into your sketchbook/libraries directory.
 If you don't know where you sketchbook/libraries directory is simply click on:
-[File]-Prefernces
+[File]->Prefernces
 or from the keyboard type: &lt;ctrl&gt;comma (hold ctrl and press comma)
 The location of your sketchbook directory will be in the text box.
 The zip image must be installed in a directory called "libraries" under that directory.<br>
@@ -132,14 +116,14 @@ The zip image must be installed in a directory called "libraries" under that dir
 After the zip file has been extracted and the hd44780 sketchbook library has been created,
 the library must now be renamed. (see below)
 
-### Renaming hd44780 libary directory name after installation w/o library manager
+### Renaming hd44780 libary directory name after manual installation w/o library manager
 When not using the library manager, the hd44780 library directory created in your sketchbook libary area will not be the correct name.
 This is due to the way github creates its zip files and the way the IDE library manager works.
 The downloaded zip file and internal directory will have a name like hd44780-X.Y.Z which causes the sketchbook library name to also be hd44780-X.Y.Z
 While the IDE will usually allow this to work, the proper name should be simply "hd44780" and not using its real name can cause issues in the future.<br>
 To rename the library directory, simply go to the sketchbook library location and rename it.
 If you don't know where you sketchbook/libraries directory is simply click on:
-[File]-Prefernces
+[File]->Prefernces
 or from the keyboard type: &lt;ctrl&gt;comma (hold ctrl and press comma)
 The location of your sketchbook directory will be in the text box.<br>
 Use your favorite tool to rename it.
@@ -149,12 +133,13 @@ API Summary
 The table below is a summary of all the available API functions in the hd44780 library.
 
 Additional information about the API functions and how to use them
-can be found in the included examples.
+can be found in the examples.
 
 
 |Function                               | Description                           |
 | --------------------------------------| --------------------------------------|
 | **LiquidCrystal API**                 | https://www.arduino.cc/en/Reference/LiquidCrystal |
+| init(...)                             | **not supported**
 | begin(cols, rows)                     | initialize communication interface and LCD<br> **hd44780 extension**: returns zero on success |
 | clear()                               | clear the display and home the cursor<br> **hd44780 extension**: returns zero on success |
 | home()	                        | home the cursor<br> **hd44780 extension**: returns zero on success |
@@ -177,18 +162,19 @@ can be found in the included examples.
 | leftToRight()                         | write left to right, set autoshift to left<br> **hd44780 extension**: returns zero on success |
 | rightToLeft()                         | write right to left, set autoshift to right<br> **hd44780 extension**: returns zero on success |
 | createChar(charval, charmap[])        | create a custom character<br> **hd44780 extension**: returns zero on success |
-| moveCursorLeft()                      | move cursor one space to right<br> **hd44780 extension**: returns zero on success |
-| moveCursorRight()                     | move cursor one space to left<br> **hd44780 extension**: returns zero on success |
 | setRowOffsets(row0, row1, row2, row3) | set address for start of each line                                        |
 | command(cmd)                          | send raw 8bit hd44780 command to LCD<br> **hd44780 extension**: returns zero on success |
 |                                       ||
 | **hd44780 extensions**<br>Included in hd44780 but not part of LiquidCrytal or LCD 1.0 API ||
+| createChar(charval, charmap[])        | create a custom character<br>(supports charmap in AVR PROGMEM)<br>returns zero on success |
 | backlight()	                        | turn on backlight (max brightness)<br>returns zero on success |
 | noBacklight()                         | turn off backlight<br>returns zero on success    |
 | lineWrap()                            | turn on automatic line wrapping<br>(wraps lines but does not scroll display)<br>returns zero on success
 | noLineWrap()                          | turn off automatic line wrapping<br>returns zero on success
+| moveCursorLeft()                      | move cursor one space to right<br>returns zero on success |
+| moveCursorRight()                     | move cursor one space to left<br>returns zero on success |
 | read()                                | read data byte from LCD<br>(requires r/w signal control)<br>returns negative value on failure |
-| setExecTimes(chUs, insUs)             | configure cmd and instruction/data times |
+| setExecTimes(chUs, insUs)             | configure clear/home and instruction/data times |
 |                                       ||
 | **Optional LCD API 1.0 Functions**    | http://playground.arduino.cc/Code/LCDAPI
 | setBacklight(dimvalue)                | set backlight brightness (0-255)<br> **hd44780 extension**: returns zero on success |
@@ -209,11 +195,18 @@ can be found in the included examples.
 
 Examples
 ========
-Examples for the included i/o classes are provided to demonstrate how to use hd44780.<br>
-hd44780 also includes some examples that use other 3rd party LCD libraries rather than hd44780.
+Examples for the included hd44780 i/o classes are provided to demonstrate how to use LCDs with various h/w interfaces.<br>
+Each i/o class included in the hd44780 library package has its own examples.<br>
+You can access i/o class examples from the IDE from [File]->Examples->hd44780->ioClass and then choose the desired i/o class.<br>
+hd44780 also includes some examples that use other 3rd party LCD libraries rather than hd44780 which can be found under otherLibraries.<br>
+**The examples in the hd44780exmaples area are special purpose sketches that are used as include files for the i/o class examples.
+They should not be looked at as examples for how to use the library.**
+While the hd44780examples sketches can be modified to work standalone with any LiquidCrystal API compatible library, their primary purpose, as shipped in the hd44780 library package, is to act as an include file for the i/o class wrapper sketches and are not intended to be used directly.  
+**See the ioClass specific subdirectories for the examples for each ioClass.**
 
-See the included readme files under the examples directory for additional information
-about the included examples.<br>
+
+See the readme files under the examples directory and the wiki for
+additional information about the examples.<br>
 If browsing on the hd44780 github repository, you can click on the examples
 directory and its subdirectories to see each readme file.
 
@@ -221,7 +214,59 @@ directory and its subdirectories to see each readme file.
 CHANGELOG
 ----------------------
 
+[0.9.3] - 2018-02-11
+ * I2CexpDiag updates to output esp8266 specific i2c pin information.
+ * mkreleasePatcher tool updates
+ * Documenation sketch updates
+ * README, comment, and error message udpates for hd44780examples
+ * Added README for the Documentation.ino sketch
+
+[0.9.2] - 2018-02-04
+ * update version info for 0.9.2 release
+ * Bug fix to mkreleasePostPatcher
+ * Added initial README.html file
+ * updates to various readme files
+ * TAB/space alignment correction in comments of many sketches.
+ * update mkrelease tools to auto update version info in Documentation files
+ * Added Documenation sketch to provide links to documenation
+ * Updated Copyright year
+ * updated documenation link in hd44780_i2Clcd.h
+ * tweaks to hd44780_pinIO class code and examples for esp8266 based boards.
+ * LCDCustomChars - added additional custom character builder website link
+
+[0.9.1] - 2018-01-06
+ * update version info for 0.9.1 release
+ * added missing LCDcharset sketch to hd44780_NTCU165ECPB i/o class
+ * updated keyword file, readme files, and added comments to some sketches
+ * LCDiSpeed prints actual i2c clock rate when core supports access to it
+ * fixed timing issue in status()
+ * Updated LCDCustomChars sketch - no longer shows full lcd character set
+ * added LCDcharset template sketch to hd44780examples
+ * report read data mismatch in ReadWrite Sketch
+ * setRowOffsets() can now be called before begin()
+ * Added LiquidCrystal_I2C compatible constructor to hd44780_I2Cexp
+ * Added LCD API 1.0 init() function
+ * 3rd party otherLibraries now only have LCDiSpeed example
+ * Fixed bug in LiquidCrystal hd44780examples
+ * fixed bug in a hd44780 constructor
+ * overload to allow write(0) without having to use a cast
+ * createChar() support for AVR PROGMEM data
+ * I2Cexp fixed issue with handling of E signal on read of 2nd nibble
+ * readme updates
+ * Use h/w SPI pins for examples, when possible
+ * Have to stop SPI for s/w read
+ * Use hardware SPI for CU-U iowrite
+ * add CU-U examples
+ * add CU-U to READMEs
+ * Cleanup and add documentation for Noritake CU-U series
+ * Add io class for Noritake CU-U Series VFD (in serial mode)
+ * removed old hd44780examples/CustomChars wrapper scketch from all i/o classes
+ * updated Arduino IDE keywords
+ * move hd44780 example CustomChars to each i/o class as LCDCustomChars
+ * removed sprintf() from LCDiSpeed
+
 [0.9.0] - 2017-05-12
+ * update version info for 0.9.0 release
  * Simplification of HelloWorld sketch examples
  * comment clarifications to UpTime example sketches
  * Updates to work around TinyWireM library bugs

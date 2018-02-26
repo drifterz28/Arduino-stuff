@@ -57,15 +57,13 @@ MqttConnector::MqttConnector(const char* host, uint16_t port)
         }
 
         if (_user_on_after_message_arrived != NULL) {
-            int prefix_len = _config.channelPrefix.length()+1;
+            int prefix_len = _config.channelPrefix.length();
             String topic = pub.topic();
             String p_topic = topic.substring(prefix_len);
 
             const char *p = p_topic.c_str();
             int fc = 0;
-            while(*p++ != '/') {
-              fc++;
-            }
+            while(*p++ != '/') { fc++; }
             _user_on_after_message_arrived(p_topic, p_topic.substring(fc+1), pub.payload_string());
         }
     };
@@ -109,14 +107,16 @@ void MqttConnector::init_config(const char* host, uint16_t port)
     this->d = &dd;
     static struct station_config conf;
     wifi_station_get_config(&conf);
-    const char* ssid = reinterpret_cast<const char*>(conf.ssid);
-
+    const char* ssid = reinterpret_cast<const char*>(conf.ssid); 
+    String mac = String(WiFi.macAddress());
+    mac.toLowerCase();
+    Serial.println(mac);
     info["ssid"] =  String(ssid);
     info["flash_size"] = ESP.getFlashChipSize();
     info["flash_id"] = String(ESP.getFlashChipId(), HEX);
     info["chip_id"] = String(ESP.getChipId(), HEX);
     info["sdk"] = String(system_get_sdk_version());
-    info["mac"] = WiFi.macAddress();
+    info["mac"] = mac;
 }
 
 MqttConnector::MqttConnector(const char* host, uint16_t port, cmmc_config_t config_hook)
@@ -130,7 +130,9 @@ void MqttConnector::_clear_last_will() {
     MQTT_DEBUG_PRINT("WILL TOPIC: ");
     MQTT_DEBUG_PRINTLN(_config.topicLastWill);
 
-    static String willText = String("ONLINE|") + String(_config.clientId) + "|" + (millis()/1000);
+    static String willText = String("{\"status\":1") 
+    + String(",\"id\":\"") + String(_config.clientId) 
+    + "\"}";
     MQTT::Publish newpub(_config.topicLastWill, (uint8_t*) willText.c_str(), willText.length());
     newpub.set_retain(true);
     _config.client->publish(newpub);
@@ -183,7 +185,7 @@ void MqttConnector::_hook_config()
     }
 
     if (_config.clientId == "") {
-      _config.clientId = String(ESP.getChipId());
+      _config.clientId = String(ESP.getChipId(), HEX);
     }
 
     String commandChannel = "/$/command";
@@ -205,13 +207,13 @@ void MqttConnector::_hook_config()
 
     // subscribe
     if (_config.topicSub.length() == 0) {
-      _config.topicSub = String(_config.channelPrefix) + String("/") +
-      String(_config.clientId) + commandChannel;
+      _config.topicSub = String(_config.channelPrefix) +
+        String(_config.clientId) + commandChannel;
     }
 
     // publish
     if (_config.topicPub.length() == 0) {
-      _config.topicPub = String(_config.channelPrefix) + String("/") +
+      _config.topicPub = String(_config.channelPrefix) +
       String(_config.clientId) + statusChannel;
     }
 
@@ -220,11 +222,12 @@ void MqttConnector::_hook_config()
     MQTT_DEBUG_PRINT("TOPIC PUB = ");
     MQTT_DEBUG_PRINTLN(_config.topicSub);
 
-    _config.topicLastWill = String(_config.channelPrefix) + String("/") +
-    String(_config.clientId) + lwtChannel;
+    _config.topicLastWill = String(_config.channelPrefix) +
+      String(_config.clientId) + lwtChannel;
 
+    (*info)["id"] = _config.clientId;
     (*info)["client_id"] = _config.clientId;
-    (*info)["device_id"] = _config.clientId;
+    (*info)["device_id"] = String(ESP.getChipId(), HEX);
     (*info)["prefix"] = _config.channelPrefix;
     (*info)["ip"] = c_ipStr;
 
@@ -261,7 +264,8 @@ void MqttConnector::_hook_config()
 
     if (_config.enableLastWill) {
         MQTT_DEBUG_PRINT("ENABLE LAST WILL: ");
-        String willText = String("DEAD|") + String(_config.clientId) + "|" + (millis());
+        // String willText = String("DEAD|") + String(_config.clientId) + "|" + (millis());
+        static String willText = String("{\"status\":0,\"id\": \"") + String(_config.clientId) + "\"}";
         int qos = 1;
         int retain = true;
         (_config.connOpts)->set_will(_config.topicLastWill, willText, qos, retain);
@@ -297,6 +301,23 @@ void MqttConnector::sync_pub(String payload)
 
     MQTT::Publish newpub(_config.topicSub, (uint8_t*)payload.c_str(), payload.length());
     newpub.set_retain(true);
+    _config.client->publish(newpub);
+}
+
+void MqttConnector::sync_advpub(String prefix, String topic, String payload, bool retain)
+{
+    //prefix is actually not yet usable
+    if (prefix != ""){
+      topic=String(_config.channelPrefix) + String("/") + String(_config.clientId)+topic;
+    }
+
+    MQTT_DEBUG_PRINT("SYNC PUB TO CHANNEL ");
+    MQTT_DEBUG_PRINT(topic.c_str());
+    MQTT_DEBUG_PRINT(".... -> ");
+    MQTT_DEBUG_PRINTLN(payload.c_str());
+
+    MQTT::Publish newpub(topic, (uint8_t*)payload.c_str(), payload.length());
+    newpub.set_retain(retain);
     _config.client->publish(newpub);
 }
 
@@ -363,15 +384,11 @@ void MqttConnector::doPublish(bool force)
         #endif
         MQTT_DEBUG_PRINTLN();
 
-        // if (_user_hook_publish_data != NULL)
-        // {
-        //     _user_hook_publish_data(dataPtr);
-        // }
-
         MQTT::Publish newpub(_config.topicPub, (uint8_t*)jsonStrbuffer, strlen(jsonStrbuffer));
         if (_config.retainPublishMessage) {
             newpub.set_retain(true) ;
         }
+
         if(!_config.client->publish(newpub)) {
             MQTT_DEBUG_PRINTLN();
             MQTT_DEBUG_PRINTLN("PUBLISHED FAILED!");
@@ -383,7 +400,6 @@ void MqttConnector::doPublish(bool force)
             if (_user_on_after_publish) {
                 _user_on_after_publish(newpub);
             }
-
         }
 
         MQTT_DEBUG_PRINTLN("====================================");

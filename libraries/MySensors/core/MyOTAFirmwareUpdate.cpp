@@ -6,7 +6,7 @@
  * network topology allowing messages to be routed to nodes.
  *
  * Created by Henrik Ekblad <henrik.ekblad@mysensors.org>
- * Copyright (C) 2013-2016 Sensnology AB
+ * Copyright (C) 2013-2017 Sensnology AB
  * Full contributor list: https://github.com/mysensors/Arduino/graphs/contributors
  *
  * Documentation: http://www.mysensors.org
@@ -24,20 +24,25 @@ extern MyMessage _msg;
 extern MyMessage _msgTmp;
 
 // local variables
+#ifdef MY_OTA_USE_I2C_EEPROM
+I2CEeprom _flash(MY_OTA_I2C_ADDR);
+#else
 SPIFlash _flash(MY_OTA_FLASH_SS, MY_OTA_FLASH_JDECID);
-nodeFirmwareConfig_t _nodeFirmwareConfig;
-bool _firmwareUpdateOngoing;
-uint32_t _firmwareLastRequest;
-uint16_t _firmwareBlock;
-uint8_t _firmwareRetry;
+#endif
 
-void readFirmwareSettings(void)
+LOCAL nodeFirmwareConfig_t _nodeFirmwareConfig;
+LOCAL bool _firmwareUpdateOngoing = false;
+LOCAL uint32_t _firmwareLastRequest;
+LOCAL uint16_t _firmwareBlock;
+LOCAL uint8_t _firmwareRetry;
+
+LOCAL void readFirmwareSettings(void)
 {
 	hwReadConfigBlock((void*)&_nodeFirmwareConfig, (void*)EEPROM_FIRMWARE_TYPE_ADDRESS,
 	                  sizeof(nodeFirmwareConfig_t));
 }
 
-void firmwareOTAUpdateRequest(void)
+LOCAL void firmwareOTAUpdateRequest(void)
 {
 	const uint32_t enterMS = hwMillis();
 	if (_firmwareUpdateOngoing && (enterMS - _firmwareLastRequest > MY_OTA_RETRY_DELAY)) {
@@ -55,16 +60,21 @@ void firmwareOTAUpdateRequest(void)
 		firmwareRequest.type = _nodeFirmwareConfig.type;
 		firmwareRequest.version = _nodeFirmwareConfig.version;
 		firmwareRequest.block = (_firmwareBlock - 1);
-		OTA_DEBUG(PSTR("OTA:FRQ:FW REQ,T=%04X,V=%04X,B=%04X\n"), _nodeFirmwareConfig.type,
+		OTA_DEBUG(PSTR("OTA:FRQ:FW REQ,T=%04" PRIX16 ",V=%04" PRIX16 ",B=%04" PRIX16 "\n"),
+		          _nodeFirmwareConfig.type,
 		          _nodeFirmwareConfig.version, _firmwareBlock - 1); // request FW update block
 		(void)_sendRoute(build(_msgTmp, GATEWAY_ADDRESS, NODE_SENSOR_ID, C_STREAM, ST_FIRMWARE_REQUEST,
 		                       false).set(&firmwareRequest, sizeof(requestFirmwareBlock_t)));
 	}
 }
 
-bool firmwareOTAUpdateProcess(void)
+LOCAL bool firmwareOTAUpdateProcess(void)
 {
 	if (_msg.type == ST_FIRMWARE_CONFIG_RESPONSE) {
+		if(_firmwareUpdateOngoing) {
+			OTA_DEBUG(PSTR("!OTA:FWP:UPDO\n"));	// FW config response received, FW update already ongoing
+			return true;
+		}
 		nodeFirmwareConfig_t *firmwareConfigResponse = (nodeFirmwareConfig_t *)_msg.data;
 		// compare with current node configuration, if they differ, start FW fetch process
 		if (memcmp(&_nodeFirmwareConfig, firmwareConfigResponse, sizeof(nodeFirmwareConfig_t))) {
@@ -96,7 +106,7 @@ bool firmwareOTAUpdateProcess(void)
 			// extract FW block
 			replyFirmwareBlock_t *firmwareResponse = (replyFirmwareBlock_t *)_msg.data;
 
-			OTA_DEBUG(PSTR("OTA:FWP:RECV B=%04X\n"), firmwareResponse->block);	// received FW block
+			OTA_DEBUG(PSTR("OTA:FWP:RECV B=%04" PRIX16 "\n"), firmwareResponse->block);	// received FW block
 			if (firmwareResponse->block != _firmwareBlock - 1) {
 				OTA_DEBUG(PSTR("!OTA:FWP:WRONG FWB\n"));	// received FW block
 				// wrong firmware block received
@@ -110,6 +120,21 @@ bool firmwareOTAUpdateProcess(void)
 			                   firmwareResponse->data, FIRMWARE_BLOCK_SIZE);
 			// wait until flash written
 			while (_flash.busy()) {}
+#ifdef OTA_EXTRA_FLASH_DEBUG
+			{
+				char prbuf[8];
+				uint32_t addr = ((_firmwareBlock - 1) * FIRMWARE_BLOCK_SIZE) + FIRMWARE_START_OFFSET;
+				OTA_DEBUG(PSTR("OTA:FWP:FL DUMP "));
+				sprintf_P(prbuf,PSTR("%04" PRIX16 ":"), (uint16_t)addr);
+				MY_SERIALDEVICE.print(prbuf);
+				for(uint8_t i=0; i<FIRMWARE_BLOCK_SIZE; i++) {
+					uint8_t data = _flash.readByte(addr + i);
+					sprintf_P(prbuf,PSTR("%02" PRIX8 ""), (uint8_t)data);
+					MY_SERIALDEVICE.print(prbuf);
+				}
+				OTA_DEBUG(PSTR("\n"));
+			}
+#endif
 			_firmwareBlock--;
 			if (!_firmwareBlock) {
 				// We're done! Do a checksum and reboot.
@@ -143,7 +168,7 @@ bool firmwareOTAUpdateProcess(void)
 	return false;
 }
 
-void presentBootloaderInformation(void)
+LOCAL void presentBootloaderInformation(void)
 {
 	requestFirmwareConfig_t *requestFirmwareConfig = (requestFirmwareConfig_t *)_msgTmp.data;
 	mSetLength(_msgTmp, sizeof(requestFirmwareConfig_t));
@@ -157,12 +182,13 @@ void presentBootloaderInformation(void)
 	(void)_sendRoute(build(_msgTmp, GATEWAY_ADDRESS, NODE_SENSOR_ID, C_STREAM,
 	                       ST_FIRMWARE_CONFIG_REQUEST, false));
 }
-bool isFirmwareUpdateOngoing(void)
+
+LOCAL bool isFirmwareUpdateOngoing(void)
 {
 	return _firmwareUpdateOngoing;
 }
 // do a crc16 on the whole received firmware
-bool transportIsValidFirmware(void)
+LOCAL bool transportIsValidFirmware(void)
 {
 	// init crc
 	uint16_t crc = ~0;
@@ -176,7 +202,8 @@ bool transportIsValidFirmware(void)
 			}
 		}
 	}
-	OTA_DEBUG(PSTR("OTA:CRC:B=%04X,C=%04X,F=%04X\n"), _nodeFirmwareConfig.blocks,crc,
+	OTA_DEBUG(PSTR("OTA:CRC:B=%04" PRIX16 ",C=%04" PRIX16 ",F=%04" PRIX16 "\n"),
+	          _nodeFirmwareConfig.blocks,crc,
 	          _nodeFirmwareConfig.crc);
 	return crc == _nodeFirmwareConfig.crc;
 }

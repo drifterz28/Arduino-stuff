@@ -17,13 +17,14 @@
 // on the top row and then read the data from the LCD to print it on the
 // second row
 //
-// If there are errors the arduino supports a built in LED,
+// If there are errors and the arduino supports a built in LED,
 // an error status code will blink on the built in LED.
 // Error codes:
 // (1) lcd device initalization failed
 // (2) lcd device does not support reads
 // (3) error reading data from lcd device
 // (4) error writing data to lcd device
+// (5) read data mismatch
 //
 
 #include <hd44780.h>
@@ -35,7 +36,13 @@
 // Note: this can be with or without backlight control:
 
 // without backlight control:
+// note that ESP8266 based arduinos must use the Dn defines rather than
+// raw pin numbers.
+#if defined (ARDUINO_ARCH_ESP8266)
+const int rs=D8, rw=A0, en=D9, db4=D4, db5=D5, db6=D6, db7=D7; // for esp8266 devices
+#else
 const int rs=8, rw=A0, en=9, db4=4, db5=5, db6=6, db7=7;
+#endif
 hd44780_pinIO lcd(rs, rw, en, db4, db5, db6, db7);
 
 //with backlight control:
@@ -114,7 +121,7 @@ unsigned long secs;
 			{
 				lcd.clear();
 				lcd.print("read fail");
-				fatalError(3);
+				fatalError(5);
 			}
 
 			lcd.setCursor(col, 1);

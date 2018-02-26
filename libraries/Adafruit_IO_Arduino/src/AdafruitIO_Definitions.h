@@ -13,7 +13,7 @@
 #define ADAFRUITIO_DEFINITIONS_H_
 
 #define ADAFRUITIO_VERSION_MAJOR 2
-#define ADAFRUITIO_VERSION_MINOR 5
+#define ADAFRUITIO_VERSION_MINOR 6
 #define ADAFRUITIO_VERSION_PATCH 0
 
 // forward declaration
@@ -41,18 +41,30 @@ class AdafruitIOGroupCallback {
 
 };
 
+// Uncomment/comment to turn on/off debug output messages.
+#define AIO_DEBUG
 // uncomment/comment to turn on/off error output
 #define AIO_ERROR
 
 // where debug messages will be printed
 #define AIO_PRINTER Serial
+// If using something like Zero or Due, change the above to SerialUSB
+
+// Define actual debug output functions when necessary.
+#ifdef AIO_DEBUG
+  #define AIO_DEBUG_PRINT(...) { AIO_PRINTER.print(__VA_ARGS__); }
+  #define AIO_DEBUG_PRINTLN(...) { AIO_PRINTER.println(__VA_ARGS__); }
+#else
+  #define AIO_DEBUG_PRINT(...) {}
+  #define AIO_DEBUG_PRINTLN(...) {}
+#endif
 
 #ifdef AIO_ERROR
-  #define AIO_ERR_PRINT(...) { AIO_PRINTER.print(__VA_ARGS__); }
-  #define AIO_ERR_PRINTLN(...) { AIO_PRINTER.println(__VA_ARGS__); }
+  #define AIO_ERROR_PRINT(...) { AIO_PRINTER.print(__VA_ARGS__); }
+  #define AIO_ERROR_PRINTLN(...) { AIO_PRINTER.println(__VA_ARGS__); }
 #else
-  #define AIO_ERR_PRINT(...) {}
-  #define AIO_ERR_PRINTLN(...) {}
+  #define AIO_ERROR_PRINT(...) {}
+  #define AIO_ERROR_PRINTLN(...) {}
 #endif
 
 #define AIO_PING_INTERVAL 60000
@@ -61,7 +73,9 @@ class AdafruitIOGroupCallback {
 #define AIO_ERROR_TOPIC "/errors"
 #define AIO_THROTTLE_TOPIC "/throttle"
 
-#define AIO_SSL_FINGERPRINT "26 96 1C 2A 51 07 FD 15 80 96 93 AE F7 32 CE B9 0D 01 55 C4"
+// latest fingerprint can be generated with
+// echo | openssl s_client -connect io.adafruit.com:443 |& openssl x509 -fingerprint -noout
+#define AIO_SSL_FINGERPRINT "77 00 54 2D DA E7 D8 03 27 31 23 99 EB 27 DB CB A5 4C 57 18"
 
 #define AIO_FEED_NAME_LENGTH 20
 #define AIO_DATA_LENGTH 45

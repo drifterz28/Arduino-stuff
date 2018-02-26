@@ -1,10 +1,9 @@
 # arduino-mqtt
 
 [![Build Status](https://travis-ci.org/256dpi/arduino-mqtt.svg?branch=master)](https://travis-ci.org/256dpi/arduino-mqtt)
+[![GitHub release](https://img.shields.io/github/release/256dpi/arduino-mqtt.svg)](https://github.com/256dpi/arduino-mqtt/releases)
 
-**MQTT library for Arduino based on the lwmqtt project**
-
-This library bundles the [lwmqtt](https://github.com/256dpi/lwmqtt) client and adds a thin wrapper to get an Arduino like API.
+This library bundles the [lwmqtt](https://github.com/256dpi/lwmqtt) MQTT 3.1.1 client and adds a thin wrapper to get an Arduino like API.
 
 Download the latest version from the [release](https://github.com/256dpi/arduino-mqtt/releases) section. Or even better use the builtin Library Manager in the Arduino IDE and search for "MQTT".
 
@@ -17,6 +16,7 @@ The following examples show how you can use the library with various Arduino com
 - [Arduino WiFi Shield](https://github.com/256dpi/arduino-mqtt/blob/master/examples/ArduinoWiFiShield/ArduinoWiFiShield.ino)
 - [Adafruit HUZZAH ESP8266](https://github.com/256dpi/arduino-mqtt/blob/master/examples/AdafruitHuzzahESP8266/AdafruitHuzzahESP8266.ino) ([SSL](https://github.com/256dpi/arduino-mqtt/blob/master/examples/AdafruitHuzzahESP8266_SSL/AdafruitHuzzahESP8266_SSL.ino))
 - [Arduino/Genuino WiFi101 Shield](https://github.com/256dpi/arduino-mqtt/blob/master/examples/ArduinoWiFi101/ArduinoWiFi101.ino) ([SSL](https://github.com/256dpi/arduino-mqtt/blob/master/examples/ArduinoWiFi101_SSL/ArduinoWiFi101_SSL.ino))
+- [Arduino MKR GSM 1400](https://github.com/256dpi/arduino-mqtt/blob/master/examples/ArduinoMKRGSM1400/ArduinoMKRGSM1400.ino) ([SSL](https://github.com/256dpi/arduino-mqtt/blob/master/examples/ArduinoMKRGSM1400_SSL/ArduinoMKRGSM1400_SSL.ino))
 - [ESP32 Development Board](https://github.com/256dpi/arduino-mqtt/blob/master/examples/ESP32DevelopmentBoard/ESP32DevelopmentBoard.ino) ([SSL](https://github.com/256dpi/arduino-mqtt/blob/master/examples/ESP32DevelopmentBoard_SSL/ESP32DevelopmentBoard_SSL.ino))
 
 Other shields and boards should also work if they provide a [Client](https://www.arduino.cc/en/Reference/ClientConstructor) based network implementation.
@@ -26,6 +26,8 @@ Other shields and boards should also work if they provide a [Client](https://www
 - The maximum size for packets being published and received is set by default to 128 bytes. To change the buffer sizes, you need to use `MQTTClient client(256)` instead of just `MQTTClient client` on the top of your sketch. The passed value denotes the read and write buffer size.
 
 - On the ESP8266 it has been reported that an additional `delay(10);` after `client.loop();` fixes many stability issues with WiFi connections.
+
+- To use the library with shiftr.io, you need to provide the token key (username) and token secret (password) as the second and third argument to `client.connect(name, key, secret)`. 
 
 ## Example
 
@@ -89,7 +91,7 @@ void loop() {
   }
 }
 
-void messageReceived(String topic, String payload) {
+void messageReceived(String &topic, String &payload) {
   Serial.println("incoming: " + topic + " - " + payload);
 }
 ```
@@ -129,15 +131,26 @@ void onMessage(MQTTClientCallbackSimple);
 // Callback signature: void messageReceived(String &topic, String &payload) {}
 
 void onMessageAdvanced(MQTTClientCallbackAdvanced);
-// Callback signature: void messageReceived(MQTTClient *client, char topic[], unsigned int length) {}
+// Callback signature: void messageReceived(MQTTClient *client, char[] topic, char payload[], int payload_length) {}
 ```
 
 - The set callback is mostly called during a call to `loop()` but may also be called during a call to `subscribe()`, `unsubscribe()` or `publish() // QoS > 0` if messages have been received before receiving the required acknowledgement. Therefore, it is strongly recommended to not call `subscribe()`, `unsubscribe()` or `publish() // QoS > 0` directly in the callback.
+
+Set more advanced options:
+
+```c++
+void setOptions(int keepAlive, bool cleanSession, int timeout);
+```
+
+- The `keepAlive` option controls the keep alive interval (default: 10).
+- The `cleanSession` option controls the session retention on the broker side (default: true).
+- The `timeout` option controls the default timeout for all commands in milliseconds (default: 1000). 
 
 Connect to broker using the supplied client id and an optional username and password:
 
 ```c++
 boolean connect(const char clientId[]);
+boolean connect(const char clientId[], const char username[]);
 boolean connect(const char clientId[], const char username[], const char password[]);
 ```
 
@@ -154,8 +167,8 @@ boolean publish(const char topic[], const String &payload);
 boolean publish(const char topic[], const String &payload, bool retained, int qos);
 boolean publish(const char topic[], const char payload[]);
 boolean publish(const char topic[], const char payload[], bool retained, int qos);
-boolean publish(const char topic[], const char payload[], unsigned int length);
-boolean publish(const char topic[], const char payload[], unsigned int length, bool retained, int qos);
+boolean publish(const char topic[], const char payload[], int length);
+boolean publish(const char topic[], const char payload[], int length, bool retained, int qos);
 ```
 
 Subscribe to a topic:

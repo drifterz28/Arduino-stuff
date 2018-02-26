@@ -66,8 +66,6 @@
  * Make sure to fill in your ssid and WiFi password below for ssid & pass.
  */
 
-#include <ArduinoOTA.h>
-
 // Enable debug prints to serial monitor
 #define MY_DEBUG
 
@@ -77,6 +75,7 @@
 // Enables and select radio type (if attached)
 #define MY_RADIO_NRF24
 //#define MY_RADIO_RFM69
+//#define MY_RADIO_RFM95
 
 #define MY_GATEWAY_ESP8266
 
@@ -88,14 +87,14 @@
 // #define MY_ESP8266_HOSTNAME "sensor-ota-gateway"
 
 // Enable UDP communication
-//#define MY_USE_UDP
+//#define MY_USE_UDP  // If using UDP you need to set MY_CONTROLLER_IP_ADDRESS below
 
 // Enable MY_IP_ADDRESS here if you want a static ip address (no DHCP)
 //#define MY_IP_ADDRESS 192,168,178,87
 
-// If using static ip you need to define Gateway and Subnet address as well
-#define MY_IP_GATEWAY_ADDRESS 192,168,178,1
-#define MY_IP_SUBNET_ADDRESS 255,255,255,0
+// If using static ip you can define Gateway and Subnet address as well
+//#define MY_IP_GATEWAY_ADDRESS 192,168,178,1
+//#define MY_IP_SUBNET_ADDRESS 255,255,255,0
 
 // The port to keep open on node server mode
 #define MY_PORT 5003
@@ -117,7 +116,6 @@
 // Digital pin used for inclusion mode button
 #define MY_INCLUSION_MODE_BUTTON_PIN  3
 
-
 // Set blinking period
 // #define MY_DEFAULT_LED_BLINK_PERIOD 300
 
@@ -133,11 +131,12 @@
 #include <ESP8266WiFi.h>
 #endif
 
+#include <ArduinoOTA.h>
 #include <MySensors.h>
 
 void setup()
 {
-
+	// Setup locally attached sensors
 	ArduinoOTA.onStart([]() {
 		Serial.println("ArduinoOTA start");
 	});
@@ -162,10 +161,6 @@ void setup()
 		}
 	});
 	ArduinoOTA.begin();
-	Serial.println("Ready");
-	Serial.print("IP address: ");
-	Serial.println(WiFi.localIP());
-
 }
 
 void presentation()
@@ -173,9 +168,9 @@ void presentation()
 	// Present locally attached sensors here
 }
 
-
 void loop()
 {
 	// Send locally attech sensors data here
 	ArduinoOTA.handle();
 }
+

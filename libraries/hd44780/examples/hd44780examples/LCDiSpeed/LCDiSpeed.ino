@@ -85,8 +85,11 @@ static const int dummyvar = 0; // dummy declaration for older broken IDEs!!!!
 
 
 #ifndef HD44780_LCDOBJECT
+
+#error "Special purpose sketch: Use i/o class example wrapper sketch instead."
+
 /*
- * If not using a hd44780 library i/o class wrapper example sketch,
+ * If not using a hd44780 library i/o class example wrapper sketch,
  * you must modify the sketch to include any needed header files for the
  * intended library and define the lcd object.
  *
@@ -95,51 +98,6 @@ static const int dummyvar = 0; // dummy declaration for older broken IDEs!!!!
  * and comment out the #error message.
  */
 
-#error "Use i/o class wrapper sketch instead; otherwise, edit appropriately."
-
-// Examples
-
-// hd44780 with hd44780_I2Cexp i/o class
-//#include <Wire.h>
-//#include <hd44780.h> // include hd44780 library header file
-//#include <hd44780ioClass/hd44780_I2Cexp.h> // i/o expander/backpack class
-//hd44780_I2Cexp lcd; // auto detect backpack and pin mappings
-
-// hd44780 with hd44780_pinIO class is for 4 pin directly connected interface
-// initialize the library with the Arduino pin numbers of the LCD interface pins
-//#include <Wire.h>
-//#include <hd44780.h> // include hd44780 library header file
-//#include <hd44780ioClass/hd44780_pinIO.h> // hd44780 i/o class for pin control
-// without backlight control:
-//const int rs=12, en=11, db4=5, db5=4, db6=3, db7=2; // IDE LiquidCrystal pins
-//const int rs=8, en=9, db4=4, db5=5, db6=6, db7=7; // lcd keypad shield pins
-//hd44780_pinIO lcd(rs, en, db4, db5, db6, db7);
-//with backlight control:
-//const int rs=8, en=9, db4=4, db5=5, db6=6, db7=7, bl=10, blLevel=HIGH;
-//hd44780_pinIO lcd(rs, en, db4, db5, db6, db7, bl, blLEvel);
-
-//const int rs=8, en=9, d4=4, d5=5, d6=6, d7=7; // pins for lcd keypad shield
-//hd44780_pinIO lcd(rs, en, d4, d5, d6, d7);
-
-// LiquidCrystal class is for 4 pin directly connected interface
-// initialize the library with the Arduino pin numbers of the LCD interface pins
-//#include <LiquidCrystal.h>
-//const int rs=8, en=9, d4=4, d5=5, d6=6, d7=7;
-//LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
-
-// LiquidTWI 'faster' adafruit i2c library
-//#include <Wire.h>
-//#include <LiquidTWI.h>
-//LiquidTWI lcd(0); // Connect via i2c, default address #0 (A0-A2 not jumpered)
-//#define WIRECLOCK 400000
-
-// Adafruit I2C for their #292 i2c/spi backpack
-//#include <Wire.h>
-//#include <Adafruit_LiquidCrystal.h>
-//Adafruit_LiquidCrystal lcd(0); // use default i2c address
-
-//#include <PCF8574_I2C_LCD.h>
-////PCF8574_I2C_LCD lcd((PCF8574_address)0x27);
 
 #endif
 
@@ -188,7 +146,7 @@ static const int dummyvar = 0; // dummy declaration for older broken IDEs!!!!
 // ============================================================================
 
 unsigned long timeFPS(uint8_t iter, uint8_t cols, uint8_t rows);
-void showFPS(unsigned long etime, const char *fpstype, const char *fttype);
+void showFPS(unsigned long etime, int cols, int rows, const char *fpstype);
 void showByteXfer(unsigned long FPStime);
 void fatalError(int ecode);
 
@@ -225,18 +183,27 @@ void setup(void)
 #endif
 
 #ifdef WIRECLOCK
-#if (ARDUINO >= 157) && !defined(MPIDE)
+#if defined(WIRE_HAS_SETCLOCK) || ((ARDUINO >= 157) && !defined(MPIDE))
 	Wire.setClock(WIRECLOCK); // set i2c clock bit rate, if asked
 #else
 #error attempting to use Wire.setClock on IDE that does not support it
 #endif
 #endif
+
+#if defined (WIRE_HAS_GETCLOCK)
+	lcd.print("i2c clock:");
+	lcd.setCursor(0,1);
+	lcd.print(Wire.getClock());
+	lcd.print(" Hz");
+	delay(3000);
+#endif
+
+
 }
 
 void loop(void)
 {
 unsigned long etime;
-char buf[8];
 
 	delay(10);		// delay to ensure no previous commands still pending
 
@@ -255,8 +222,7 @@ char buf[8];
 	 * show FPS rate and Frame update time for this display
 	 */
 
-	sprintf(buf, "%dx%d", LCD_COLS, LCD_ROWS);
-	showFPS(etime, buf, 0);
+	showFPS(etime, LCD_COLS, LCD_ROWS, 0);
 
 #ifdef iLCD
 	/*
@@ -274,8 +240,7 @@ char buf[8];
 		/*
 		 * show independent FPS rate & Frame update time
 		 */
-		sprintf(buf, "%dx%di", iLCD_COLS, iLCD_ROWS);
-		showFPS(etime, buf, "i");
+		showFPS(etime, iLCD_COLS, iLCD_ROWS, "i");
 	}
 #endif
 
@@ -304,7 +269,7 @@ unsigned long stime, etime;
 	etime = micros();
 	return((etime-stime));
 }
-void showFPS(unsigned long etime, const char *fpstype, const char* fttype)
+void showFPS(unsigned long etime, int cols, int rows, const char* fpstype)
 {
 float fps;
 
@@ -319,7 +284,11 @@ float fps;
 
 
 	lcd.clear();
-	lcd.print(fpstype);
+	lcd.print(cols);
+	lcd.print('x');
+	lcd.print(rows);
+	if(fpstype)
+		lcd.print(fpstype);
 	lcd.print("FPS:");
 	if(fps < 1000)
 		lcd.print(" ");
@@ -334,8 +303,8 @@ float fps;
 		delay(DELAY_TIME);
 		lcd.clear();
 	}
-	if(fttype)
-		lcd.print(fttype);
+	if(fpstype)
+		lcd.print(fpstype);
 	lcd.print("Ftime: ");
 	lcd.print((etime)/10.0/FPS_iter/1000);
 	lcd.print("ms");

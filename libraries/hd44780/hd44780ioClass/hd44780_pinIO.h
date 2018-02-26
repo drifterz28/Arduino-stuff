@@ -1,7 +1,7 @@
 //  vi:ts=4
 // ---------------------------------------------------------------------------
 //  hd44780_pinIO.h - hd44780_pinIO i/o subclass for hd44780 library
-//  Copyright (c) 2016  Bill Perry
+//  Copyright (c) 2016-2018  Bill Perry
 // ---------------------------------------------------------------------------
 //
 //  This file is part of the hd44780 library
@@ -435,7 +435,18 @@ void write4bits(uint8_t value)
 void pulseEnable(void)
 {
 	digitalWrite(_en, HIGH);
+#if defined (ARDUINO_ARCH_ESP8266)
+	// the extra delay here is not for the LCD, it is to allow signal lines time
+	// to settle when using 3v esp modules with 5v LCDs.
+	// 3v outputs on 5v inputs is already a bit out of spec and
+	// without this, the slew rate isn't fast enough to get "reliable"
+	// signal levels
+	// while it isn't needed for 3v LCDs, the time penalty isn't much
+	// to always do it.
+	delayMicroseconds(2);    // enable pulse must be >450ns
+#else
 	delayMicroseconds(1);    // enable pulse must be >450ns
+#endif
 	digitalWrite(_en, LOW);
 }
 
