@@ -61,9 +61,10 @@
 //	starting with IDE 1.6.2 or can found here:
 //		https://github.com/duinoWitchery/hd44780
 //
-// 2. Hookup up i2c i/o expander backpack based LCD devices.
+// 2. Hookup up i2c i/o expander backpack based LCD devices
+//    and only the i2c LCD backpack(s) if possible.
 //	Currently supports PCF8574 or MCP32008 devices
-//	(can test more than one LCD at a time)
+//	(can test more than one LCD device at a time)
 //	WARNING: 3v only systems like ARM/Teensy3/ESP8266 devices will need to take
 //		precautions on SDA and SCL connections if using 5V I2C devices.
 //		Level shifters are recommended and should be used.
@@ -150,6 +151,8 @@
 // -----------------------------------------------------------------------
 // 
 // History
+// 2018.06.17 bperrybap  - check for SDA and SCL shorted together
+// 2018.03.23 bperrybap  - bumped default instruction time to 38us
 // 2016.12.25 bperrybap  - updates for ESP8266
 // 2016.08.07 bperrybap  - added lcd memory tests
 // 2016.07.27 bperrybap  - added defines for setting execution times
@@ -161,6 +164,10 @@
 #include <Wire.h>
 #include <hd44780.h>
 #include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
+
+#ifndef INPUT_PULLUP
+#error Sketch requires INPUT_PULLUP which is not supported by this IDE/core version
+#endif
 
 // ============================================================================
 // user configurable options below this point
@@ -189,7 +196,7 @@ const int LCD_COLS = 16;
 // on all displays.
 
 //#define LCD_CHEXECTIME 2000
-//#define LCD_INSEXECTIME 37
+//#define LCD_INSEXECTIME 38
 
 // ============================================================================
 // End of user configurable options
@@ -290,6 +297,7 @@ int nopullups;
 	// this is for sytems that use virtual serial over USB.
 		if(millis() > 5000) // millis starts at 0 after reset
 			break;
+		delay(10); // easy way to allow some cores to call yield()
 	} while(!Serial);
 #endif
 
@@ -462,7 +470,12 @@ int nopullups;
 			else
 				Serial.print(PASSED);
 #endif
-		
+			if(errors)
+			{
+				Serial.println();
+				Serial.println(F("Memory test failures are usually due to poor solder connections"));
+				Serial.println(F("Most common cause is poor solder joints on pins soldered to the LCD"));
+			}
 		}
 		else
 		{
@@ -513,7 +526,7 @@ int nopullups;
 	}
 	Serial.println(F("Each working display should have its backlight on"));
 	Serial.println(F("and be displaying its #, address, and config information"));
-	Serial.println(F("If display is blank, but backlight is on, try adjusting contrast pot"));
+	Serial.println(F("If all pixels are on, or no pixels are showing, but backlight is on, try adjusting contrast pot"));
 	Serial.println(F("If backlight is off, wait for next test"));
 	delay(10000);
 	Serial.println(hline);
@@ -830,6 +843,72 @@ void printDigitalPin(Print &outdev, int pin)
 
 #endif // I2CEXPDIAG_CFG_DECODE_ESP8266PINS
 
+// print the analog pin if it matches the pin #
+#if defined(A0) || defined(PIN_A0)
+	if(pin == A0)
+		outdev.print(F(" A0"));
+#endif
+#if defined(A1) || defined(PIN_A1)
+	if(pin == A1)
+		outdev.print(F(" A1"));
+#endif
+#if defined(A2) || defined(PIN_A2)
+	if(pin == A2)
+		outdev.print(F(" A2"));
+#endif
+#if defined(A3) || defined(PIN_A3)
+	if(pin == A3)
+		outdev.print(F(" A3"));
+#endif
+#if defined(A4) || defined(PIN_A4)
+	if(pin == A4)
+		outdev.print(F(" A4"));
+#endif
+#if defined(A5) || defined(PIN_A5)
+	if(pin == A5)
+		outdev.print(F(" A5"));
+#endif
+#if defined(A6) || defined(PIN_A6)
+	if(pin == A6)
+		outdev.print(F(" A6"));
+#endif
+#if defined(A7) || defined(PIN_A7)
+	if(pin == A7)
+		outdev.print(F(" A7"));
+#endif
+#if defined(A8) || defined(PIN_A8)
+	if(pin == A8)
+		outdev.print(F(" A8"));
+#endif
+#if defined(A9) || defined(PIN_A9)
+	if(pin == A9)
+		outdev.print(F(" A9"));
+#endif
+#if defined(A10) || defined(PIN_A10)
+	if(pin == A10)
+		outdev.print(F(" A10"));
+#endif
+#if defined(A11) || defined(PIN_A11)
+	if(pin == A11)
+		outdev.print(F(" A11"));
+#endif
+#if defined(A12) || defined(PIN_A12)
+	if(pin == A12)
+		outdev.print(F(" A12"));
+#endif
+#if defined(A13) || defined(PIN_A13)
+	if(pin == A13)
+		outdev.print(F(" A13"));
+#endif
+#if defined(A14) || defined(PIN_A14)
+	if(pin == A14)
+		outdev.print(F(" A14"));
+#endif
+#if defined(A15) || defined(PIN_A15)
+	if(pin == A15)
+		outdev.print(F(" A15"));
+#endif
+
 	return;
 }
 
@@ -877,18 +956,11 @@ void showSystemConfig(void)
 	Serial.println(F_CPU);
 
 	Serial.println(hline);
-#if NUM_ANALOG_INPUTS > 5
-	Serial.print(F(" A4: digital pin: "));
-	Serial.println(A4);
-	Serial.print(F(" A5: digital pin: "));
-	Serial.println(A5);
-#endif
 
-
-	Serial.print(F("SDA: digital pin: "));
+	Serial.print(F("SDA digital pin: "));
 	printDigitalPin(Serial, SDA);
 	Serial.println();
-	Serial.print(F("SCL: digital pin: "));
+	Serial.print(F("SCL digital pin: "));
 	printDigitalPin(Serial, SCL);
 	Serial.println();
 
@@ -909,18 +981,17 @@ int pullupOnPin(uint8_t pin)
 {
 
 	// test to see if pin is pulled/stuck low
-	// this is more complicated that it should be because
-	// Arduino 1.0 didn't support INPUT_PULLUP
-	// it was added in the next releast 1.0.1
-	// but this code *should* still work even on 1.0 or if the pin
-	// doesn't have a built in pullup.
 #ifdef INPUT_PULLUP
 	pinMode(pin, INPUT_PULLUP);
 	delay(20);
 	if(digitalRead(pin) == LOW)
 		return(-1); // pin appears to be driven low
 #else
-	// this code is for Arduion 1.0 which didn't support INPUT_PULLUP
+	// this is more complicated that it should be because
+	// Arduino 1.0 didn't support INPUT_PULLUP
+	// it was added in the next release 1.0.1
+	// but this code *should* still work even on 1.0 or if the pin
+	// doesn't have a built in pullup.
 	{
 	int t = 0;
 		pinMode(pin, INPUT);
@@ -948,13 +1019,41 @@ int pullupOnPin(uint8_t pin)
 
 	return(1); // pin appears to NOT have an external pullup
 }
+/*
+ * test of two pins are shorted together
+ * returns non zero if pins are shorted
+ * returns zero if pins are not shorted
+ */
+int pinsShorted(uint8_t p1, uint8_t p2)
+{
+int rval = 0; // assume not shorted
+
+	pinMode(p1, INPUT_PULLUP);
+	pinMode(p2, INPUT_PULLUP);
+	delay(150); // this needs quite a while for chipkit/pic32 to let signals rise up
+
+	pinMode(p1, OUTPUT);
+	digitalWrite(p1, LOW);
+	delay(5);
+
+	if(digitalRead(p2) == LOW)
+		rval = -1;
+
+	// put back into input state
+	pinMode(p1, INPUT);
+	pinMode(p2, INPUT);
+
+	return(rval);
+}
 
 /*
  * Test for external pullups on i2c signals
  *
  * returns 0 if both pullups appear ok
  * returns positive if no pullup exist on either pin (soft error on AVR)
- * returns negative if either pin is driven low (I2C cannot function)
+ * returns negative if I2C cannot function
+ * 	-1 if either pin is driven low
+ * 	-2 if pins are shorted together
  */
 int i2cpulluptest()
 {
@@ -998,6 +1097,19 @@ int s;
 	{
     	Serial.println(F("YES"));
 	}
+
+	// check for short between SDA and SCL if there are no other issues
+   	Serial.print(F("Checking for I2C pins shorted together - "));
+	if(pinsShorted(SDA, SCL))
+	{
+		Serial.println(F("Shorted"));
+		rval = -2;
+	}
+	else
+	{
+		Serial.println(F("Not Shorted"));
+	}
+	
 	if(rval)
 	{
         Serial.println(hstar);
@@ -1010,8 +1122,10 @@ int s;
 		}
 		else
 		{
-        	Serial.println(F("ERROR: SDA or SCL stuck pin"));
-			rval = -1;
+			if(rval == -1)
+        		Serial.println(F("ERROR: SDA or SCL stuck pin"));
+			else
+        		Serial.println(F("ERROR: SDA and SCL shorted together"));
 		}
         Serial.println(hstar);
     }
@@ -1158,6 +1272,7 @@ int rdata;
 			Serial.print(F(" Read Error after writing "));
 			Serial.println((unsigned int)pat, HEX);
 			errors++;
+			delay(1); // easy way to allow some cores to call yield()
 		}
 		else if((rdata != pat))
 		{
@@ -1171,6 +1286,7 @@ int rdata;
 			Serial.println((unsigned int)pat, HEX);
 
 			errors++;
+			delay(1); // easy way to allow some cores to call yield()
 		}
 	}
 	return(errors);
@@ -1202,6 +1318,7 @@ int rdata;
 			Serial.print(F("\tRead Error addr: "));
 			Serial.println((unsigned int)addr, HEX);
 			errors++;
+			delay(1); // easy way to allow some cores to call yield()
 		}
 	}
 
@@ -1224,6 +1341,7 @@ int rdata;
 			Serial.print(F("\tRead Error addr: "));
 			Serial.println((unsigned int)addr, HEX);
 			errors++;
+			delay(1); // easy way to allow some cores to call yield()
 		}
 		else if((rdata != addr))
 		{
@@ -1237,6 +1355,7 @@ int rdata;
 			Serial.println((unsigned int)addr, HEX);
 
 			errors++;
+			delay(1); // easy way to allow some cores to call yield()
 		}
 	}
 	return(errors);

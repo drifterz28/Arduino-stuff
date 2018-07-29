@@ -10,11 +10,15 @@
 
 // Select your modem:
 #define TINY_GSM_MODEM_SIM800
+// #define TINY_GSM_MODEM_SIM808
 // #define TINY_GSM_MODEM_SIM900
+// #define TINY_GSM_MODEM_UBLOX
+// #define TINY_GSM_MODEM_BG96
 // #define TINY_GSM_MODEM_A6
 // #define TINY_GSM_MODEM_A7
 // #define TINY_GSM_MODEM_M590
 // #define TINY_GSM_MODEM_ESP8266
+// #define TINY_GSM_MODEM_XBEE
 
 // Set serial for debug console (to the Serial Monitor, speed 115200)
 #define SerialMon Serial
@@ -37,7 +41,7 @@ uint32_t rate = 0; // Set to 0 for Auto-Detect
 void setup() {
   // Set console baud rate
   SerialMon.begin(115200);
-  delay(5000);
+  delay(3000);
 }
 
 void loop() {

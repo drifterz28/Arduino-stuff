@@ -1,8 +1,4 @@
-# `hd44780` Extensible hd44780 LCD library ![hd44780Version](https://img.shields.io/badge/Version-0.9.3-yellow.svg?style=plastic)
-
-CurrentStatus
-=============
-The library is currently in a beta state very close to a 1.0.0 release
+# `hd44780` Extensible hd44780 LCD library ![hd44780Version](https://img.shields.io/badge/Version-1.0.0-green.svg?style=plastic)
 
 Licensing
 =========
@@ -199,22 +195,54 @@ Examples for the included hd44780 i/o classes are provided to demonstrate how to
 Each i/o class included in the hd44780 library package has its own examples.<br>
 You can access i/o class examples from the IDE from [File]->Examples->hd44780->ioClass and then choose the desired i/o class.<br>
 hd44780 also includes some examples that use other 3rd party LCD libraries rather than hd44780 which can be found under otherLibraries.<br>
-**The examples in the hd44780exmaples area are special purpose sketches that are used as include files for the i/o class examples.
+**The sketches in the hd44780examples area are special purpose sketches that are used as include files for the i/o class examples.
 They should not be looked at as examples for how to use the library.**
 While the hd44780examples sketches can be modified to work standalone with any LiquidCrystal API compatible library, their primary purpose, as shipped in the hd44780 library package, is to act as an include file for the i/o class wrapper sketches and are not intended to be used directly.  
 **See the ioClass specific subdirectories for the examples for each ioClass.**
 
-
-See the readme files under the examples directory and the wiki for
+See **hd44780examples** sketch along with the readme files under the examples directory and the wiki for
 additional information about the examples.<br>
 If browsing on the hd44780 github repository, you can click on the examples
 directory and its subdirectories to see each readme file.
+
+Additional Information & Documentation
+======================================
+You can find additional information by using the included **Documentation** sketch.<br>
+Once the hd44780 library package is installed. It can be found in the IDE from [File]->Examples->Documentation<br>
+It provides hd44780 library information as well as links to further information including
+* links to the hd44780 repository, hd44780 wiki.
+* hd44780 custom font tools
+* links to various Arduino boards pinout information and diagrams
+* datasheets for various LCD h/w
+
 
 
 CHANGELOG
 ----------------------
 
+[1.0.0] - 2018-06-24
+ * change readme version badge to green
+ * hd44780examples special sketch documentation updates
+ * Updates to readme for non hd44780 library examples
+ * readme cleanup for release
+ * I2CexpDiag slight change to SDA and SCL digital pin output message
+ * I2CexpDiag now checks for SDA and SCL being shorted together
+
+[0.9.4] - 2018-06-12
+ * update version info for 0.9.4 release
+ * README tweaks for release
+ * readme and sketch documentation/comment updates
+ * Added hd44780examples sketch to document examples and hide hd44780examples sketches
+ * loops that wait on Serial now call delay() which calls yield()
+ * hd44780_I2Cexp now returns RV_ENXIO error if device not at specified address
+ * I2CexpDiag prints messsage about potential poor solder joints on memory errors
+ * added delay(1) to error output which calls yield() to avoid watchdog on some cores
+ * bumped default instruction time from 37us to 38us
+ * LineWrap example explains limitations when using 16x1 / 8x2 displays
+ * Correct indention issue in LCDCustomChars example
+
 [0.9.3] - 2018-02-11
+ * update version info for 0.9.3 release
  * I2CexpDiag updates to output esp8266 specific i2c pin information.
  * mkreleasePatcher tool updates
  * Documenation sketch updates

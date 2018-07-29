@@ -28,6 +28,7 @@ int toggleSwitch = 3;
 
 int holdState = 0;
 int buttonState = 0;
+uint8_t LEDdelay = 10;
 int red = 000;
 int green = 000;
 int blue = 000;
@@ -37,10 +38,23 @@ int lastBlue = 150;
 
 uint8_t MAC_array[6];
 char MAC_char[18];
+//flag for saving data
+bool shouldSaveConfig = false;
+
+//callback notifying us of the need to save config
+void saveConfigCallback () {
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+}
+
 // Fill the dots one after the other with a color
 void colorWipe(uint32_t c, uint8_t wait) {
-  for (uint16_t i = 0; i < strip.numPixels(); i++) {
+  int pixelCount = strip.numPixels();
+  for (uint16_t i = 0; i < pixelCount; i++) {
     strip.setPixelColor(i, c);
+    if(pixelCount - i > i) {
+      strip.setPixelColor(pixelCount - i, c);
+    }
     strip.show();
     delay(wait);
   }
@@ -72,7 +86,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
           lastGreen = green;
           lastBlue = blue;
         }
-        colorWipe(strip.Color(red, green, blue), 0);
+        colorWipe(strip.Color(red, green, blue), LEDdelay);
         webSocket.broadcastTXT(String(red) + "," + String(green) + "," + String(blue));
       }
       break;
@@ -84,7 +98,7 @@ void turnOff() {
   green = 000;
   blue = 000;
   webSocket.broadcastTXT(String(red) + "," + String(green) + "," + String(blue));
-  colorWipe(strip.Color(red, green, blue), 0);
+  colorWipe(strip.Color(red, green, blue), LEDdelay);
 }
 
 void turnOn() {
@@ -92,7 +106,7 @@ void turnOn() {
   green = lastGreen;
   blue = lastBlue;
   webSocket.broadcastTXT(String(red) + "," + String(green) + "," + String(blue));
-  colorWipe(strip.Color(red, green, blue), 0);
+  colorWipe(strip.Color(red, green, blue), LEDdelay);
 }
 
 void setup() {
@@ -101,6 +115,7 @@ void setup() {
   
   delay(4000);
   WiFiManager wifiManager;
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.autoConnect(ApName.c_str(), ApPass.c_str());
   
   Serial.println("WiFi connected");

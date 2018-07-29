@@ -9,7 +9,7 @@
 
 // change these values
 int pullDelay = 5; // in minutes
-String url = "http://iot-ecommsolution.rhcloud.com/pir"; //url to get
+String url = "http://drifterz28.com/pir"; //url to get
 int ledCount = 11;
 String ApName = "PIRLights";
 String ApPass = "0123456789";

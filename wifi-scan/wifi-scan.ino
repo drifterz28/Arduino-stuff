@@ -1,7 +1,7 @@
 #include <Button-state.h>
 #include "ESP8266WiFi.h"
 #include <SPI.h>
-#include <Wire.h>
+//#include <Wire.h>
 #include <Adafruit_SSD1306.h>
 
 Adafruit_SSD1306 display(4);

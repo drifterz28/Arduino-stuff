@@ -16,21 +16,9 @@ void setup() {
   mySerial.begin(9600);
 }
 
-void loop() {  
-  int c;
-  
+void loop() {    
   if (mySerial.available()) {
-    c = mySerial.read();  
     Serial.println("Got input:");
     Serial.println(mySerial.read());
-    if (c != 0) {
-      // Non-zero input means "turn on LED".
-      Serial.println("  on");
-      //digitalWrite(LED_PIN, HIGH);
-    } else {
-      // Input value zero means "turn off LED".
-      Serial.println("  off");
-      //digitalWrite(LED_PIN, LOW);
-    }  
   }
 }

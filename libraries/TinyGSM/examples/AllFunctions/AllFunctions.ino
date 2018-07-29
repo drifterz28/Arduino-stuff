@@ -13,6 +13,8 @@
 #define TINY_GSM_MODEM_SIM800
 // #define TINY_GSM_MODEM_SIM808
 // #define TINY_GSM_MODEM_SIM900
+// #define TINY_GSM_MODEM_UBLOX
+// #define TINY_GSM_MODEM_BG96
 // #define TINY_GSM_MODEM_A6
 // #define TINY_GSM_MODEM_A7
 // #define TINY_GSM_MODEM_M590
@@ -57,9 +59,12 @@ void setup() {
   SerialMon.begin(115200);
   delay(10);
 
+  // Set your reset, enable, power pins here
+
+  delay(3000);
+
   // Set GSM module baud rate
   TinyGsmAutoBaud(SerialAT);
-  delay(3000);
 }
 
 void loop() {
@@ -84,13 +89,18 @@ void loop() {
     return;
   }
 
+  if (modem.isNetworkConnected()) {
+    DBG("Network connected");
+  }
+
   DBG("Connecting to", apn);
   if (!modem.gprsConnect(apn, user, pass)) {
     delay(10000);
     return;
   }
 
-  bool res;
+  bool res = modem.isGprsConnected();
+  DBG("GPRS status:", res ? "connected" : "not connected");
 
   String ccid = modem.getSimCCID();
   DBG("CCID:", ccid);
@@ -118,6 +128,12 @@ void loop() {
   // This is only supported on SIMxxx series
   String gsmLoc = modem.getGsmLocation();
   DBG("GSM location:", gsmLoc);
+
+  // This is only supported on SIMxxx series
+  String gsmTime = modem.getGSMDateTime(DATE_TIME);
+  DBG("GSM Time:", gsmTime);
+  String gsmDate = modem.getGSMDateTime(DATE_DATE);
+  DBG("GSM Date:", gsmDate);
 
   String ussd_balance = modem.sendUSSD("*111#");
   DBG("Balance (USSD):", ussd_balance);
@@ -149,15 +165,29 @@ void loop() {
   DBG("Call:", res ? "OK" : "fail");
 
   if (res) {
-    delay(5000L);
-  
+    delay(1000L);
+
+    // Play DTMF A, duration 1000ms
+    modem.dtmfSend('A', 1000);
+
+    // Play DTMF 0..4, default duration (100ms)
+    for (char tone='0'; tone<='4'; tone++) {
+      modem.dtmfSend(tone);
+    }
+
+    delay(5000);
+
     res = modem.callHangup();
     DBG("Hang up:", res ? "OK" : "fail");
   }
 #endif
 
   modem.gprsDisconnect();
-  DBG("GPRS disconnected");
+  if (!modem.isGprsConnected()) {
+    DBG("GPRS disconnected");
+  } else {
+    DBG("GPRS disconnect: Failed.");
+  }
 
   // Try to power-off (modem may decide to restart automatically)
   // To turn off modem completely, please use Reset/Enable pins
