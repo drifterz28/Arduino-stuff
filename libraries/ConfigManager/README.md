@@ -1,9 +1,9 @@
 ![Logo](http://svg.wiersma.co.za/github/project?lang=cpp&title=ConfigManager&tag=wifi%20configuration%20manager)
 
-ESP8266 Wifi connection and configuration manager.
+Wifi connection and configuration manager for ESP8266 and ESP32.
 
 This library was made to ease the complication of configuring Wifi and other
-settings on an ESP8266. It is roughly split into two parts, Wifi configuration
+settings on an ESP8266 or ESP32. It is roughly split into two parts, Wifi configuration
 and REST variable configuration.
 
 # Requires
@@ -54,9 +54,17 @@ Upload the ```index.html``` file found in the ```data``` directory into the SPIF
 Instructions on how to do this vary based on your IDE. Below are links instructions
 on the most common IDEs:
 
-* [Arduino IDE](https://github.com/esp8266/Arduino/blob/master/doc/filesystem.md#uploading-files-to-file-system)
+#### ESP8266
+
+* [Arduino IDE](http://arduino-esp8266.readthedocs.io/en/latest/filesystem.html#uploading-files-to-file-system)
 
 * [Platform IO](http://docs.platformio.org/en/stable/platforms/espressif.html#uploading-files-to-file-system-spiffs)
+
+#### ESP32
+
+* [Arduino IDE](https://github.com/me-no-dev/arduino-esp32fs-plugin)
+
+* [Platform IO](http://docs.platformio.org/en/stable/platforms/espressif32.html#uploading-files-to-file-system-spiffs)
 
 # Documentation
 
@@ -74,6 +82,13 @@ void setAPName(const char *name)
 ```
 > Sets the name used for the access point.
 
+### setAPPassword
+```
+void setAPPassword(const char *password)
+```
+> Sets the password used for the access point. For WPA2-PSK network it should be at least 8 character long.
+> If not specified, the access point will be open for anybody to connect to.
+
 ### setAPFilename
 ```
 void setAPFilename(const char *filename)
@@ -88,9 +103,15 @@ void setAPTimeout(const int timeout)
 >
 > **Note:** *The timeout starts when the access point is started, but is evaluated in the loop function.*
 
+### setAPCallback
+```
+void setAPCallback(std::function<void(WebServer*)> callback)
+```
+> Sets a callback allowing customized http endpoints to be set when the access point is setup.
+
 ### setAPICallback
 ```
-void setAPICallback(std::function<void(ESP8266WebServer*)> callback)
+void setAPICallback(std::function<void(WebServer*)> callback)
 ```
 > Sets a callback allowing customized http endpoints to be set when the api is setup.
 

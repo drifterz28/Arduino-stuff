@@ -15,6 +15,10 @@ void ConfigManager::setAPName(const char *name) {
     this->apName = (char *)name;
 }
 
+void ConfigManager::setAPPassword(const char *password) {
+    this->apPassword = (char *)password;
+}
+
 void ConfigManager::setAPFilename(const char *filename) {
     this->apFilename = (char *)filename;
 }
@@ -31,11 +35,11 @@ void ConfigManager::setWifiConnectInterval(const int interval) {
     this->wifiConnectInterval = interval;
 }
 
-void ConfigManager::setAPCallback(std::function<void(ESP8266WebServer*)> callback) {
+void ConfigManager::setAPCallback(std::function<void(WebServer*)> callback) {
     this->apCallback = callback;
 }
 
-void ConfigManager::setAPICallback(std::function<void(ESP8266WebServer*)> callback) {
+void ConfigManager::setAPICallback(std::function<void(WebServer*)> callback) {
     this->apiCallback = callback;
 }
 
@@ -242,7 +246,7 @@ void ConfigManager::startAP() {
     IPAddress ip(192, 168, 1, 1);
     WiFi.mode(WIFI_AP);
     WiFi.softAPConfig(ip, ip, IPAddress(255, 255, 255, 0));
-    WiFi.softAP(apName);
+    WiFi.softAP(apName, apPassword);
 
     delay(500); // Need to wait to get IP
 
@@ -250,7 +254,7 @@ void ConfigManager::startAP() {
     dnsServer->setErrorReplyCode(DNSReplyCode::NoError);
     dnsServer->start(DNS_PORT, "*", ip);
 
-    server.reset(new ESP8266WebServer(80));
+    server.reset(new WebServer(80));
     server->collectHeaders(headerKeys, headerKeysSize);
     server->on("/", HTTPMethod::HTTP_GET, std::bind(&ConfigManager::handleAPGet, this));
     server->on("/", HTTPMethod::HTTP_POST, std::bind(&ConfigManager::handleAPPost, this));
@@ -271,7 +275,7 @@ void ConfigManager::startApi() {
 
     mode = api;
 
-    server.reset(new ESP8266WebServer(80));
+    server.reset(new WebServer(80));
     server->collectHeaders(headerKeys, headerKeysSize);
     server->on("/", HTTPMethod::HTTP_GET, std::bind(&ConfigManager::handleAPGet, this));
     server->on("/", HTTPMethod::HTTP_POST, std::bind(&ConfigManager::handleAPPost, this));
