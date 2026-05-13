@@ -7,10 +7,10 @@
 #include <ESP8266mDNS.h>
 #include <Adafruit_NeoPixel.h>
 
-const char* ssid = "SSID";
-const char* pass = "password";
+const char *ssid = "SSID";
+const char *pass = "password";
 // enter Git hub page address here with out the https ex: drifterz28.github.io/IoT-nightlight/
-String gitHubPage = "";
+String gitHubPage = "drifterz28.github.io/Arduino-stuff/";
 
 int pin = 0;
 int ledCount = 10;
@@ -28,47 +28,55 @@ int green = 000;
 int blue = 000;
 
 // Fill the dots one after the other with a color
-void colorWipe(uint32_t c, uint8_t wait) {
-  for (uint16_t i = 0; i < strip.numPixels(); i++) {
+void colorWipe(uint32_t c, uint8_t wait)
+{
+  for (uint16_t i = 0; i < strip.numPixels(); i++)
+  {
     strip.setPixelColor(i, c);
     strip.show();
     delay(wait);
   }
 }
 
-void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght) {
-  switch (type) {
-    case WStype_DISCONNECTED:
-      USE_SERIAL.printf("[%u] Disconnected!\n", num);
-      break;
-    case WStype_CONNECTED: {
-        IPAddress ip = webSocket.remoteIP(num);
-        USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
-        // send message to client
-        webSocket.sendTXT(num, String(red) + "," + String(green) + "," + String(blue));
-      }
-      break;
-    case WStype_TEXT:
-      USE_SERIAL.printf("[%u] get Text: %s\n", num, payload);
-      if (payload[0] == '#') {
-        // we get RGB data
-        // decode rgb data
-        uint32_t rgb = (uint32_t) strtol((const char *) &payload[1], NULL, 16);
-        red = ((rgb >> 16) & 0xFF);
-        green = ((rgb >> 8) & 0xFF);
-        blue = ((rgb >> 0) & 0xFF);
-        colorWipe(strip.Color(red, green, blue), 0);
-        webSocket.broadcastTXT(String(red) + "," + String(green) + "," + String(blue));
-      }
-      break;
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lenght)
+{
+  switch (type)
+  {
+  case WStype_DISCONNECTED:
+    USE_SERIAL.printf("[%u] Disconnected!\n", num);
+    break;
+  case WStype_CONNECTED:
+  {
+    IPAddress ip = webSocket.remoteIP(num);
+    USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+    // send message to client
+    webSocket.sendTXT(num, String(red) + "," + String(green) + "," + String(blue));
+  }
+  break;
+  case WStype_TEXT:
+    USE_SERIAL.printf("[%u] get Text: %s\n", num, payload);
+    if (payload[0] == '#')
+    {
+      // we get RGB data
+      // decode rgb data
+      uint32_t rgb = (uint32_t)strtol((const char *)&payload[1], NULL, 16);
+      red = ((rgb >> 16) & 0xFF);
+      green = ((rgb >> 8) & 0xFF);
+      blue = ((rgb >> 0) & 0xFF);
+      colorWipe(strip.Color(red, green, blue), 0);
+      webSocket.broadcastTXT(String(red) + "," + String(green) + "," + String(blue));
+    }
+    break;
   }
 }
 
-void setup() {
+void setup()
+{
   USE_SERIAL.begin(115200);
   USE_SERIAL.println();
 
-  for (uint8_t t = 4; t > 0; t--) {
+  for (uint8_t t = 4; t > 0; t--)
+  {
     USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
     USE_SERIAL.flush();
     delay(1000);
@@ -76,8 +84,9 @@ void setup() {
   WiFi.hostname("ESP_Light_1");
   WiFiMulti.addAP(ssid, pass);
   // softAP used to not boradcast SSID form esp
-  WiFi.softAP("esp8266", "nothingyoucanfindout");
-  while (WiFiMulti.run() != WL_CONNECTED) {
+  WiFi.softAP("esp32", "esp32_123");
+  while (WiFiMulti.run() != WL_CONNECTED)
+  {
     delay(100);
   }
   USE_SERIAL.print("SSID: ");
@@ -89,12 +98,14 @@ void setup() {
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
 
-  if (MDNS.begin("esp8266")) {
+  if (MDNS.begin("esp32"))
+  {
     USE_SERIAL.println("MDNS responder started");
   }
 
   // handle index
-  server.on("/", []() {
+  server.on("/", []()
+            {
     // send index.html
     String html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>RGB Cololrs</title>";
     html += "<meta name=\"viewport\" content=\"user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width\">";
@@ -104,8 +115,7 @@ void setup() {
     html += "<script src=\"https://unpkg.com/babel-core@5.8.38/browser.min.js\"></script>";
     html += "</head><body><div class=\"container\"></div>";
     html += "<script type=\"text/babel\" src=\"https://" + gitHubPage + "/assets/rgb-led.js\"></script></body></html>";
-    server.send(200, "text/html", html);
-  });
+    server.send(200, "text/html", html); });
 
   server.begin();
   // start the LED's
@@ -116,7 +126,8 @@ void setup() {
   MDNS.addService("ws", "tcp", 81);
 }
 
-void loop() {
+void loop()
+{
   webSocket.loop();
   server.handleClient();
 }
