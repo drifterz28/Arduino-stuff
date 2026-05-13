@@ -1,22 +1,14 @@
 const url = location.hostname;
-let conn;
-
-function connectWS(onopen, onerror, onmessage) {
-  conn = new WebSocket(`ws://${url}:81/`, ["arduino"]);
-  conn.onopen = onopen;
-  conn.onerror = onerror;
-  conn.onmessage = onmessage;
-  conn.onclose = () => {
-    console.log("WebSocket closed, reconnecting in 3s...");
-    setTimeout(() => connectWS(onopen, onerror, onmessage), 3000);
-  };
-}
 
 const sendRGB = debounce((hex) => {
-  if (conn.readyState === WebSocket.OPEN) {
-    conn.send(hex);
-    console.log("send", hex);
-  }
+  fetch(`http://${url}/color`, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: hex,
+  })
+    .then((r) => r.text())
+    .then((csv) => console.log("send ok", csv))
+    .catch((err) => console.log("send error", err));
 }, 500);
 
 function debounce(func, wait, immediate) {
@@ -145,17 +137,14 @@ const App = React.createClass({
     console.log("Error ", err);
   },
   componentWillMount() {
-    connectWS(
-      () => {
-        conn.send("Connect " + new Date());
-      },
-      (error) => {
-        this.handleError(error);
-      },
-      (e) => {
-        this.handleColor(e.data);
-      },
-    );
+    const poll = () => {
+      fetch(`http://${url}/color`)
+        .then((r) => r.text())
+        .then((csv) => this.handleColor(csv))
+        .catch((err) => console.log("poll error", err));
+    };
+    poll();
+    setInterval(poll, 2000);
   },
   handleColor(data) {
     // get color from the server and
