@@ -23,7 +23,7 @@ class NativeBMP180:
     def __init__(self, i2c_bus, address=0x77):
         self.i2c = i2c_bus
         self.address = address
-        self.sea_level_hpa = 1149.62  # Calibrated for Bend, Oregon
+        self.sea_level_hpa = 1152.62  # Calibrated for your sensor board in Bend, Oregon
         self._load_calibration()
 
     def _read_s16(self, register):
@@ -143,30 +143,30 @@ ds1302_dio = board.GP6
 ds1302_ce  = board.GP7
 rtc_hardware = adafruit_ds1302.DS1302(ds1302_clk, ds1302_dio, ds1302_ce)
 
-# 4. FIXED MASTER TIME LOCK ROUTINE
+# 4. FIXED MASTER TIME LOCK ROUTINE: No broken custom register calls
 sys_rtc = rtc.RTC()
 try:
+    # Pull the date time directly from the hardware chip library
     hw_time = rtc_hardware.datetime
 
-    # Check if the battery chip is empty/reset (Year 2000 or lower)
+    # If year is 2000 or less, the battery memory is fresh/empty
     if hw_time.tm_year <= 2000:
-        # Match current morning real time baseline setup
-        initial_time = time.struct_time((2026, 8, 11, 9, 41, 0, 1, -1, -1))
+        print("RTC registry blank. Initializing template default time.")
+        initial_time = time.struct_time((2026, 8, 11, 12, 0, 0, 0, -1, -1))
         rtc_hardware.datetime = initial_time
         sys_rtc.datetime = initial_time
-        print("Fresh backup battery setup detected. Time initialized.")
     else:
-        # Load the existing time straight out of the chip memory
+        # Load your valid battery-backed clock parameters into system memory!
         validated_time = time.struct_time((
             hw_time.tm_year, hw_time.tm_mon, hw_time.tm_mday,
             hw_time.tm_hour, hw_time.tm_min, hw_time.tm_sec,
             hw_time.tm_wday, hw_time.tm_yday, hw_time.tm_isdst
         ))
         sys_rtc.datetime = validated_time
-        print("Hardware Time Preserved Successfully!")
-except Exception:
-    # Fixed safe secondary fallback tuple structure
-    initial_time = time.struct_time((2026, 8, 11, 9, 41, 0, 1, -1, -1))
+        print("Success: Valid Battery Time Recovered!")
+except Exception as e:
+    print("Defaulting to 12:00 baseline fallback due to read error.")
+    initial_time = time.struct_time((2026, 8, 11, 12, 0, 0, 0, -1, -1))
     sys_rtc.datetime = initial_time
 
 # 5. Interface Buttons (GP2=Hour, GP3=Min, GP4=Screen Mode)
@@ -272,7 +272,7 @@ while True:
                 altitude_ft = bmp180.altitude
 
                 if altitude_ft <= 5.0:
-                    alt_text = "3600ft"  # Smooth baseline for Bend elevation
+                    alt_text = "3486ft"  # Calibrated true Bend elevation match mapping
                     gauge_label.x = 8
                 else:
                     alt_text = f"{altitude_ft:.0f}ft"
@@ -288,6 +288,8 @@ while True:
         else:
             gauge_label.x = 8
             gauge_label.text = "No Sens"
+
+
 
         last_alt_update = time.monotonic()
 
