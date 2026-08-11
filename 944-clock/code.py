@@ -3,9 +3,6 @@ import displayio
 displayio.release_displays()
 
 import time
-# 2. Wait for power lines to sit cleanly before starting chips
-time.sleep(1.5)
-
 import board
 import busio
 import digitalio
@@ -15,7 +12,6 @@ import struct
 from i2cdisplaybus import I2CDisplayBus
 from adafruit_display_text import label
 import adafruit_displayio_ssd1306
-import adafruit_ds1302
 from adafruit_bitmap_font import bitmap_font
 
 # --- NATIVE BMP180 REGISTER DRIVER CLASS ---
@@ -23,7 +19,7 @@ class NativeBMP180:
     def __init__(self, i2c_bus, address=0x77):
         self.i2c = i2c_bus
         self.address = address
-        self.sea_level_hpa = 1152.62  # Calibrated for your sensor board in Bend, Oregon
+        self.sea_level_hpa = 1152.62  # Calibrated for Bend, Oregon
         self._load_calibration()
 
     def _read_s16(self, register):
@@ -137,39 +133,12 @@ try:
 except Exception:
     bmp180 = None
 
-# 3. Initialize VMA301 Hardware Clock Pins
-ds1302_clk = board.GP5
-ds1302_dio = board.GP6
-ds1302_ce  = board.GP7
-rtc_hardware = adafruit_ds1302.DS1302(ds1302_clk, ds1302_dio, ds1302_ce)
-
-# 4. FIXED MASTER TIME LOCK ROUTINE: No broken custom register calls
+# 3. FIXED: Setup Software Internal Clock (Bypasses old VMA301 entirely)
 sys_rtc = rtc.RTC()
-try:
-    # Pull the date time directly from the hardware chip library
-    hw_time = rtc_hardware.datetime
+# Sets a clean starting template baseline on boot (11:35 AM)
+sys_rtc.datetime = time.struct_time((2026, 8, 11, 11, 35, 0, 1, -1, -1))
 
-    # If year is 2000 or less, the battery memory is fresh/empty
-    if hw_time.tm_year <= 2000:
-        print("RTC registry blank. Initializing template default time.")
-        initial_time = time.struct_time((2026, 8, 11, 12, 0, 0, 0, -1, -1))
-        rtc_hardware.datetime = initial_time
-        sys_rtc.datetime = initial_time
-    else:
-        # Load your valid battery-backed clock parameters into system memory!
-        validated_time = time.struct_time((
-            hw_time.tm_year, hw_time.tm_mon, hw_time.tm_mday,
-            hw_time.tm_hour, hw_time.tm_min, hw_time.tm_sec,
-            hw_time.tm_wday, hw_time.tm_yday, hw_time.tm_isdst
-        ))
-        sys_rtc.datetime = validated_time
-        print("Success: Valid Battery Time Recovered!")
-except Exception as e:
-    print("Defaulting to 12:00 baseline fallback due to read error.")
-    initial_time = time.struct_time((2026, 8, 11, 12, 0, 0, 0, -1, -1))
-    sys_rtc.datetime = initial_time
-
-# 5. Interface Buttons (GP2=Hour, GP3=Min, GP4=Screen Mode)
+# 4. Interface Buttons (GP2=Hour, GP3=Min, GP4=Screen Mode)
 btn_hour = digitalio.DigitalInOut(board.GP2)
 btn_hour.direction = digitalio.Direction.INPUT
 btn_hour.pull = digitalio.Pull.UP
@@ -182,7 +151,7 @@ btn_mode = digitalio.DigitalInOut(board.GP4)
 btn_mode.direction = digitalio.Direction.INPUT
 btn_mode.pull = digitalio.Pull.UP
 
-# 6. Load Your Segmented Custom Font
+# 5. Load Your Segmented Custom Font
 try:
     custom_font = bitmap_font.load_font("/fonts/dseg7.bdf")
     custom_font.load_glyphs("0123456789:AltfSnorE ")
@@ -203,7 +172,7 @@ time.sleep(3.0)
 # =========================================================
 
 
-# 7. Setup Main UI Elements
+# 6. Setup Main UI Elements
 current_mode = "TIME"
 
 splash = displayio.Group()
@@ -232,40 +201,32 @@ while True:
     # Hour adjustment button (Only works while on Time Screen)
     if not btn_hour.value and current_mode == "TIME":
         new_hour = (current_time.tm_hour + 1) % 24
-        updated_struct = time.struct_time((
+        sys_rtc.datetime = time.struct_time((
             current_time.tm_year, current_time.tm_mon, current_time.tm_mday,
             new_hour, current_time.tm_min, current_time.tm_sec,
             current_time.tm_wday, current_time.tm_yday, current_time.tm_isdst
         ))
-        sys_rtc.datetime = updated_struct
-        try:
-            rtc_hardware.datetime = updated_struct
-        except Exception: pass
         time.sleep(0.2)
 
     # Minute adjustment button (Only works while on Time Screen)
     if not btn_min.value and current_mode == "TIME":
         new_min = (current_time.tm_min + 1) % 60
-        updated_struct = time.struct_time((
+        sys_rtc.datetime = time.struct_time((
             current_time.tm_year, current_time.tm_mon, current_time.tm_mday,
             current_time.tm_hour, new_min, current_time.tm_sec,
             current_time.tm_wday, current_time.tm_yday, current_time.tm_isdst
         ))
-        sys_rtc.datetime = updated_struct
-        try:
-            rtc_hardware.datetime = updated_struct
-        except Exception: pass
         time.sleep(0.2)
 
     # --- SEPARATED DUAL-TIMER SCREEN UPDATES ---
 
-    # Timer 1: Clock runs fast and crisp (Every 1.0 second)
+    # Timer 1: Clock updates every 1.0 second
     if current_mode == "TIME" and (time.monotonic() - last_update >= 1.0):
         gauge_label.x = 8
         gauge_label.text = f"{current_time.tm_hour:02d}:{current_time.tm_min:02d}"
         last_update = time.monotonic()
 
-    # Timer 2: Altimeter runs slowly to prevent flickering digits (Every 10.0 seconds)
+    # Timer 2: Altimeter updates every 10.0 seconds
     elif current_mode == "ALT" and (time.monotonic() - last_alt_update >= 10.0):
         if bmp180 is not None:
             try:
@@ -288,8 +249,6 @@ while True:
         else:
             gauge_label.x = 8
             gauge_label.text = "No Sens"
-
-
 
         last_alt_update = time.monotonic()
 
